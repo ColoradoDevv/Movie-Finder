@@ -60,20 +60,22 @@ La sección "¿No sabes qué ver?" ofrece una recomendación al azar.
 ## ⚙️ Estructura del Proyecto
 
 El proyecto está diseñado bajo un enfoque modular, donde cada archivo JavaScript tiene una única responsabilidad.
-
+```bash
 ├── index.html # Estructura principal de la aplicación y base del DOM. 
 ├── styles.css # Estilos completos, manejo de variables para colores y diseño responsivo. 
 ├── assets/ 
 │ └── images/ 
 │ └── logo-tmdb.svg # Logo de TMDB utilizado en el footer. 
 └── js/ 
-    ├── api.js # Capa de Datos: Abstracción del Fetch para todas las llamadas a TMDB, incluyendo getMovieDetails con append_to_response. ├── config.js # Configuración: Almacena la apiKey, apiUrl, imageBaseUrl y youtubeBaseUrl. 
+    ├── api.js # Capa de Datos: Abstracción del Fetch para todas las llamadas a TMDB, incluyendo getMovieDetails con append_to_response.
+    ├── config.js # Configuración: Almacena la apiKey, apiUrl, imageBaseUrl y youtubeBaseUrl. 
     ├── main.js # Controlador Principal: Inicializa la app, maneja Event Listeners de navegación, búsqueda, y coordina las llamadas a otras capas. 
     ├── modal.js # Manejo del Modal: Lógica para construir el contenido detallado de la película, manejar botones de estado (favoritos/vistas) dentro del modal, y abrir/cerrar. 
     ├── recommendations.js # Lógica de Recomendación: Funcionalidad para calcular y mostrar una película aleatoria basada en criterios de calidad. 
     ├── storage.js # Persistencia Local: Funciones de CRUD para localStorage (añadir, remover, verificar favoritos y vistas). 
-    ├── ui.js # Renderizado: Funciones encargadas de crear y renderizar elementos del DOM, como las tarjetas de películas (createMovieCard) y la recomendación destacada. └── utils.js # Utilidades: Herramientas de ayuda como manejo del Loader, limpieza de resultados, y formateo de fechas.
-
+    ├── ui.js # Renderizado: Funciones encargadas de crear y renderizar elementos del DOM, como las tarjetas de películas (createMovieCard) y la recomendación destacada.
+    └── utils.js # Utilidades: Herramientas de ayuda como manejo del Loader, limpieza de resultados, y formateo de fechas.
+```
 
 ***
 
