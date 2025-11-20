@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieFinder</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="home-button" style="cursor: pointer;">MovieFinder</h1>
+            <p>Explora el universo del cine</p>
+            
+            <!-- NAVEGACIÓN PRINCIPAL -->
+            <div class="main-navigation">
+                <button id="favorites-button" class="nav-btn">
+                    Mis Favoritos ❤️
+                </button>
+                <button id="history-button" class="nav-btn">
+                    Películas Vistas 📺
+                </button>
+            </div>
+            
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Buscar una película...">
+                <button id="searchButton">Buscar</button>
+            </div>
+            <nav id="genre-nav" class="genre-nav"></nav>
+        </header>
+        
+        
+        <!-- SECCIÓN DE RECOMENDACIONES -->
+        <section class="recommendation-section">
+            <h2 class="recommendation-title">¿No sabes qué ver?</h2>
+            <p>¡Te recomendamos una película perfecta para ti!</p>
+            
+            <div class="genre-selector">
+                <select id="recommendation-genre">
+                    <option value="">Cualquier género</option>
+                </select>
+                <button id="recommend-button" class="recommend-button">
+                    🎲 Recomiéndame una película
+                </button>
+            </div>
+            
+            <div id="recommended-movie" class="recommended-movie">
+                <h3>Tu película recomendada:</h3>
+                <div class="recommended-details">
+                    <img id="recommended-poster" class="recommended-poster" src="" alt="">
+                    <div class="recommended-info">
+                        <h4 id="recommended-title"></h4>
+                        <p id="recommended-overview"></p>
+                        <p><span id="recommended-rating"></span> | <span id="recommended-year"></span></p>
+                        <button id="view-recommended-details" class="view-details-btn">Ver detalles completos</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TÍTULO DE SECCIÓN -->
+        <section class="section-header">
+            <h2 id="section-title">Películas Populares</h2>
+        </section>
+        
+        <main id="results-grid" class="results-grid"></main>
+        
+        <div id="loader" class="loader" style="display: none;"></div>
+
+        <div class="pagination">
+            <button id="load-more" style="display: none;">Cargar Más</button>
+        </div>
+    </div>
+
+    <!-- Modal mejorado -->
+    <div id="movie-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <p>Desarrollado por Juan Manuel Colorado</p>
+        <p>Esta página utiliza la API de TMDB pero no está respaldado ni certificado por TMDB.</p>
+        <img src="assets/images/logo-tmdb.svg" alt="TMDB Logo" class="tmdb-logo">
+    </footer>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
