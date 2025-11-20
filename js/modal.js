@@ -12,7 +12,6 @@ export function openModal(details) {
 
     const genres = details.genres?.map(g => g.name).join(', ') || 'Sin género';
 
-    // Obtiene el estado de los botones
     const isFav = isFavorite(details.id);
     const isWatch = isWatched(details.id);
 
@@ -24,22 +23,37 @@ export function openModal(details) {
 
     const similarMovies = details.similar?.results?.slice(0, 12) || [];
 
+    // Iconos SVG
+    const heartIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+    </svg>`;
+
+    const checkIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+        <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>`;
+
+    const starIcon = `<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+    </svg>`;
+
     modalBody.innerHTML = `
         <div class="modal-header">
             <img src="${details.poster_path ? imageBaseUrl + details.poster_path : 'https://via.placeholder.com/150x225?text=Sin+Poster'}" alt="${details.title}" class="modal-poster">
             <div>
-                <h2>${details.title}</h2>
+                <h2 id="modal-title">${details.title}</h2>
                 <p><strong>Lanzamiento:</strong> ${formatDate(details.release_date)}</p>
-                <p><strong>Género(s):</strong> ${genres}</p>
-                <p><strong>Puntuación:</strong> ⭐ ${details.vote_average.toFixed(1)} / 10</p>
+                <p><strong>Géneros:</strong> ${genres}</p>
+                <p><strong>Puntuación:</strong> ${details.vote_average.toFixed(1)} / 10</p>
                 <p><strong>Duración:</strong> ${details.runtime || 'N/A'} min</p>
                 
                 <div class="movie-actions">
-                    <button class="action-btn ${isFav ? 'active' : ''}" data-action="favorite">
-                        ${isFav ? 'Eliminar de Favoritos' : 'Añadir a Favoritos'} ❤️
+                    <button class="action-btn ${isFav ? 'active' : ''}" data-action="favorite" aria-label="${isFav ? 'Eliminar de favoritos' : 'Añadir a favoritos'}">
+                        ${heartIcon}
+                        <span>${isFav ? 'En favoritos' : 'Añadir a favoritos'}</span>
                     </button>
-                    <button class="action-btn ${isWatch ? 'active' : ''}" data-action="watched">
-                        ${isWatch ? 'Marcar como Pendiente' : 'Marcar como Visto'} ✅
+                    <button class="action-btn ${isWatch ? 'active' : ''}" data-action="watched" aria-label="${isWatch ? 'Marcar como pendiente' : 'Marcar como vista'}">
+                        ${checkIcon}
+                        <span>${isWatch ? 'Vista' : 'Marcar como vista'}</span>
                     </button>
                 </div>
             </div>
@@ -71,35 +85,35 @@ export function openModal(details) {
 
         ${trailerEmbed ? `
             <div class="modal-section">
-                <h3>Trailer</h3>
+                <h3>Tráiler</h3>
                 <div class="modal-trailer">
                     <iframe 
                         width="100%" 
                         height="315" 
                         src="${trailerEmbed}" 
-                        title="YouTube video player" 
+                        title="Tráiler de ${details.title}" 
                         frameborder="0" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                         allowfullscreen
                     ></iframe>
                 </div>
             </div>
-        ` : '<div class="modal-section"><h3>Trailer</h3><p>Trailer no disponible.</p></div>'}
+        ` : '<div class="modal-section"><h3>Tráiler</h3><p>Tráiler no disponible.</p></div>'}
         
         ${providers.length > 0 ? `
             <div class="modal-section">
-                <h3>Disponible para Streaming (CO/ES)</h3>
+                <h3>Disponible en streaming</h3>
                 <div class="production-companies">
                     ${providers.map(p => `
                         <img src="${imageBaseUrl + p.logo_path}" alt="${p.provider_name}" title="${p.provider_name}" class="company-logo">
                     `).join('')}
                 </div>
             </div>
-        ` : '<div class="modal-section"><h3>Disponible para Streaming</h3><p>Información de streaming no disponible.</p></div>'}
+        ` : '<div class="modal-section"><h3>Disponible en streaming</h3><p>Información de streaming no disponible.</p></div>'}
 
         ${movieKeywords.length > 0 ? `
             <div class="modal-section">
-                <h3>Palabras Clave</h3>
+                <h3>Palabras clave</h3>
                 <div class="keywords-list">
                     ${movieKeywords.map(k => `<span class="keyword-tag">${k.name}</span>`).join('')}
                 </div>
@@ -108,12 +122,12 @@ export function openModal(details) {
 
         ${movieReviews.length > 0 ? `
             <div class="modal-section">
-                <h3>Reseñas (${movieReviews.length})</h3>
+                <h3>Reseñas de usuarios</h3>
                 ${movieReviews.slice(0, 3).map(r => `
                     <div class="review-card">
                         <span class="author">${r.author}</span>
                         <p>${r.content.substring(0, 300)}${r.content.length > 300 ? '...' : ''}</p>
-                        <a href="${r.url}" target="_blank" rel="noopener noreferrer">Leer más</a>
+                        <a href="${r.url}" target="_blank" rel="noopener noreferrer">Leer reseña completa</a>
                     </div>
                 `).join('')}
             </div>
@@ -121,7 +135,7 @@ export function openModal(details) {
 
         ${similarMovies.length > 0 ? `
             <div class="modal-section">
-                <h3>Películas Similares</h3>
+                <h3>Películas similares</h3>
                 <div class="similar-movies">
                     ${similarMovies.map(m => `
                         <div class="similar-movie" data-movie-id="${m.id}" title="${m.title}">
@@ -137,7 +151,7 @@ export function openModal(details) {
     modal.classList.add('active');
     document.body.classList.add('modal-open');
 
-    // Botones favoritos y visto - CORREGIDO
+    // Event listeners para botones
     const favoriteBtn = modalBody.querySelector('[data-action="favorite"]');
     const watchedBtn = modalBody.querySelector('[data-action="watched"]');
 

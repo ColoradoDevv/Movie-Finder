@@ -10,22 +10,37 @@
 <body>
     <div class="container">
         <header>
-            <h1 id="home-button" style="cursor: pointer;">MovieFinder</h1>
-            <p>Explora el universo del cine</p>
+            <div class="header-content">
+                <h1 id="home-button">MovieFinder</h1>
+                <p class="tagline">Descubre tu próxima película favorita</p>
+            </div>
             
             <!-- NAVEGACIÓN PRINCIPAL -->
             <nav class="main-navigation" aria-label="Navegación principal">
                 <button id="favorites-button" class="nav-btn" aria-label="Ver mis películas favoritas">
-                    Mis Favoritos ❤️
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    <span>Favoritos</span>
                 </button>
                 <button id="history-button" class="nav-btn" aria-label="Ver películas vistas">
-                    Películas Vistas 📺
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span>Vistas</span>
                 </button>
             </nav>
             
             <div class="search-container">
                 <label for="searchInput" class="sr-only">Buscar películas</label>
-                <input type="text" id="searchInput" placeholder="Buscar una película..." aria-label="Campo de búsqueda de películas">
+                <div class="search-input-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Buscar películas..." aria-label="Campo de búsqueda de películas">
+                </div>
                 <button id="searchButton" aria-label="Buscar">Buscar</button>
             </div>
             <nav id="genre-nav" class="genre-nav" aria-label="Navegación por géneros"></nav>
@@ -33,28 +48,39 @@
         
         <!-- SECCIÓN DE RECOMENDACIONES -->
         <section class="recommendation-section" aria-labelledby="recommendation-title">
-            <h2 id="recommendation-title" class="recommendation-title">¿No sabes qué ver?</h2>
-            <p>¡Te recomendamos una película perfecta para ti!</p>
+            <div class="recommendation-header">
+                <h2 id="recommendation-title">¿No sabes qué ver?</h2>
+                <p>Obtén una recomendación personalizada</p>
+            </div>
             
             <div class="genre-selector">
                 <label for="recommendation-genre" class="sr-only">Seleccionar género para recomendación</label>
                 <select id="recommendation-genre" aria-label="Género para recomendación">
-                    <option value="">Cualquier género</option>
+                    <option value="">Todos los géneros</option>
                 </select>
                 <button id="recommend-button" class="recommend-button" aria-label="Obtener recomendación de película">
-                    🎲 Recomiéndame una película
+                    <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <path d="M21 15l-5-5L5 21"></path>
+                    </svg>
+                    <span>Recomendar película</span>
                 </button>
             </div>
             
             <div id="recommended-movie" class="recommended-movie" role="region" aria-live="polite">
-                <h3>Tu película recomendada:</h3>
+                <h3>Tu recomendación</h3>
                 <div class="recommended-details">
                     <img id="recommended-poster" class="recommended-poster" src="" alt="">
                     <div class="recommended-info">
                         <h4 id="recommended-title"></h4>
                         <p id="recommended-overview"></p>
-                        <p><span id="recommended-rating"></span> | <span id="recommended-year"></span></p>
-                        <button id="view-recommended-details" class="view-details-btn">Ver detalles completos</button>
+                        <div class="recommended-meta">
+                            <span id="recommended-rating"></span>
+                            <span class="separator">•</span>
+                            <span id="recommended-year"></span>
+                        </div>
+                        <button id="view-recommended-details" class="view-details-btn">Ver detalles</button>
                     </div>
                 </div>
             </div>
@@ -67,25 +93,36 @@
         
         <main id="results-grid" class="results-grid" role="main"></main>
         
-        <div id="loader" class="loader" style="display: none;" role="status" aria-label="Cargando"></div>
+        <div id="loader" class="loader" style="display: none;" role="status" aria-label="Cargando">
+            <div class="loader-spinner"></div>
+        </div>
 
         <div class="pagination">
-            <button id="load-more" style="display: none;" aria-label="Cargar más películas">Cargar Más</button>
+            <button id="load-more" style="display: none;" aria-label="Cargar más películas">
+                Cargar más películas
+            </button>
         </div>
     </div>
 
-    <!-- Modal mejorado -->
+    <!-- Modal -->
     <div id="movie-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
-            <button class="close-modal" aria-label="Cerrar modal">&times;</button>
+            <button class="close-modal" aria-label="Cerrar modal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
             <div id="modal-body"></div>
         </div>
     </div>
 
     <footer class="main-footer">
-        <p>Desarrollado por Juan Manuel Colorado</p>
-        <p>Esta página utiliza la API de TMDB pero no está respaldada ni certificada por TMDB.</p>
-        <img src="assets/images/logo-tmdb.svg" alt="Logo de The Movie Database" class="tmdb-logo">
+        <div class="footer-content">
+            <p class="footer-text">MovieFinder © 2024 - Desarrollado por Juan Manuel Colorado</p>
+            <p class="footer-disclaimer">Esta página utiliza la API de TMDB pero no está respaldada ni certificada por TMDB.</p>
+            <img src="assets/images/logo-tmdb.svg" alt="Logo de The Movie Database" class="tmdb-logo">
+        </div>
     </footer>
 
     <script type="module" src="js/main.js"></script>
