@@ -102,4 +102,4 @@ Para ejecutar el proyecto en tu máquina local, sigue estos sencillos pasos:
 
 * **Desarrollador:** Juan Manuel Colorado.
 * **Fuente de Datos:** Esta página utiliza la API de TMDB pero **no está respaldada ni certificada por TMDB**.
-* **Licencia:** (Añade tu licencia aquí, ej: MIT)
+* **Licencia:** [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
