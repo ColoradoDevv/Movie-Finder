@@ -224,10 +224,18 @@ viewRecommendedDetails.addEventListener('click', () => {
 modal.addEventListener('movie-state-changed', updateGrid);
 
 
+// FUNCIÓN AUXILIAR PARA CERRAR EL MODAL
+function closeModal() {
+    modal.classList.remove('active');
+    document.body.classList.remove('modal-open'); // 💡 CAMBIO APLICADO: Habilita el scroll
+}
+
+
 // CERRAR MODAL
-document.querySelector('.close-modal').addEventListener('click', () => modal.classList.remove('active'));
+document.querySelector('.close-modal').addEventListener('click', closeModal);
+
 modal.addEventListener('click', e => {
-    if (e.target === modal) modal.classList.remove('active');
+    if (e.target === modal) closeModal();
 });
 
 
