@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieFinder</title>
+    <meta name="description" content="MovieFinder - Explora películas populares, busca por género y descubre tu próxima película favorita">
+    <title>MovieFinder - Explora el Universo del Cine</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,38 +14,39 @@
             <p>Explora el universo del cine</p>
             
             <!-- NAVEGACIÓN PRINCIPAL -->
-            <div class="main-navigation">
-                <button id="favorites-button" class="nav-btn">
+            <nav class="main-navigation" aria-label="Navegación principal">
+                <button id="favorites-button" class="nav-btn" aria-label="Ver mis películas favoritas">
                     Mis Favoritos ❤️
                 </button>
-                <button id="history-button" class="nav-btn">
+                <button id="history-button" class="nav-btn" aria-label="Ver películas vistas">
                     Películas Vistas 📺
                 </button>
-            </div>
+            </nav>
             
             <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Buscar una película...">
-                <button id="searchButton">Buscar</button>
+                <label for="searchInput" class="sr-only">Buscar películas</label>
+                <input type="text" id="searchInput" placeholder="Buscar una película..." aria-label="Campo de búsqueda de películas">
+                <button id="searchButton" aria-label="Buscar">Buscar</button>
             </div>
-            <nav id="genre-nav" class="genre-nav"></nav>
+            <nav id="genre-nav" class="genre-nav" aria-label="Navegación por géneros"></nav>
         </header>
         
-        
         <!-- SECCIÓN DE RECOMENDACIONES -->
-        <section class="recommendation-section">
-            <h2 class="recommendation-title">¿No sabes qué ver?</h2>
+        <section class="recommendation-section" aria-labelledby="recommendation-title">
+            <h2 id="recommendation-title" class="recommendation-title">¿No sabes qué ver?</h2>
             <p>¡Te recomendamos una película perfecta para ti!</p>
             
             <div class="genre-selector">
-                <select id="recommendation-genre">
+                <label for="recommendation-genre" class="sr-only">Seleccionar género para recomendación</label>
+                <select id="recommendation-genre" aria-label="Género para recomendación">
                     <option value="">Cualquier género</option>
                 </select>
-                <button id="recommend-button" class="recommend-button">
+                <button id="recommend-button" class="recommend-button" aria-label="Obtener recomendación de película">
                     🎲 Recomiéndame una película
                 </button>
             </div>
             
-            <div id="recommended-movie" class="recommended-movie">
+            <div id="recommended-movie" class="recommended-movie" role="region" aria-live="polite">
                 <h3>Tu película recomendada:</h3>
                 <div class="recommended-details">
                     <img id="recommended-poster" class="recommended-poster" src="" alt="">
@@ -63,27 +65,27 @@
             <h2 id="section-title">Películas Populares</h2>
         </section>
         
-        <main id="results-grid" class="results-grid"></main>
+        <main id="results-grid" class="results-grid" role="main"></main>
         
-        <div id="loader" class="loader" style="display: none;"></div>
+        <div id="loader" class="loader" style="display: none;" role="status" aria-label="Cargando"></div>
 
         <div class="pagination">
-            <button id="load-more" style="display: none;">Cargar Más</button>
+            <button id="load-more" style="display: none;" aria-label="Cargar más películas">Cargar Más</button>
         </div>
     </div>
 
     <!-- Modal mejorado -->
-    <div id="movie-modal" class="modal-overlay">
+    <div id="movie-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <button class="close-modal" aria-label="Cerrar modal">&times;</button>
             <div id="modal-body"></div>
         </div>
     </div>
 
     <footer class="main-footer">
         <p>Desarrollado por Juan Manuel Colorado</p>
-        <p>Esta página utiliza la API de TMDB pero no está respaldado ni certificado por TMDB.</p>
-        <img src="assets/images/logo-tmdb.svg" alt="TMDB Logo" class="tmdb-logo">
+        <p>Esta página utiliza la API de TMDB pero no está respaldada ni certificada por TMDB.</p>
+        <img src="assets/images/logo-tmdb.svg" alt="Logo de The Movie Database" class="tmdb-logo">
     </footer>
 
     <script type="module" src="js/main.js"></script>

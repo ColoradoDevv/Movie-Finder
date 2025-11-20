@@ -20,7 +20,7 @@ body {
     background-color: var(--background-color);
     color: var(--text-light);
     padding: 2rem 2rem 0;
-    min-height: 100vh; /* Asegura que el footer esté abajo si no hay mucho contenido */
+    min-height: 100vh;
 }
 
 .container { max-width: 1200px; margin: 0 auto; }
@@ -34,7 +34,7 @@ body {
     margin: -1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
-    white-space: nowrap; /* Añadido para compatibilidad */
+    white-space: nowrap;
     border-width: 0;
 }
 
@@ -44,7 +44,7 @@ body {
 
 header { text-align: center; margin-bottom: 2rem; }
 header h1 { 
-    font-size: clamp(2rem, 5vw, 3rem); /* Fuente Responsive */
+    font-size: clamp(2rem, 5vw, 3rem);
     color: var(--sena-orange); 
     transition: transform 0.2s ease;
 }
@@ -60,12 +60,11 @@ header h1:hover { transform: scale(1.05); }
 }
 
 .nav-btn {
-    /* Mejorado el degradado y el diseño */
     background: linear-gradient(135deg, var(--card-color), rgba(255, 103, 25, 0.1));
     color: var(--text-light);
     border: 2px solid var(--sena-orange);
     padding: 0.75rem 1.5rem;
-    border-radius: 25px; /* Ligeramente más redondeado */
+    border-radius: 25px;
     cursor: pointer;
     font-weight: bold;
     transition: all 0.3s ease;
@@ -75,7 +74,7 @@ header h1:hover { transform: scale(1.05); }
 .nav-btn:hover {
     background: var(--sena-orange);
     color: var(--background-color);
-    transform: translateY(-3px); /* Mayor efecto al pasar el mouse */
+    transform: translateY(-3px);
 }
 
 /* BARRA DE BÚSQUEDA */
@@ -84,12 +83,12 @@ header h1:hover { transform: scale(1.05); }
     display: flex; 
     justify-content: center; 
     gap: 1rem; 
-    max-width: 600px; /* Limita el ancho del contenedor */
+    max-width: 600px;
     margin-left: auto;
     margin-right: auto;
 }
 #searchInput {
-    flex-grow: 1; /* Permite que tome el espacio disponible */
+    flex-grow: 1;
     padding: 0.75rem 1rem;
     border: 1px solid var(--glass-border); 
     border-radius: 20px;
@@ -107,7 +106,7 @@ header h1:hover { transform: scale(1.05); }
     cursor: pointer;
     font-weight: bold; 
     transition: transform 0.2s ease;
-    flex-shrink: 0; /* Evita que el botón se encoja */
+    flex-shrink: 0;
 }
 #searchButton:hover { transform: scale(1.05); }
 
@@ -117,14 +116,14 @@ header h1:hover { transform: scale(1.05); }
     display: flex; 
     flex-wrap: wrap;
     justify-content: center; 
-    gap: 0.75rem; /* Aumenta ligeramente el espacio */
+    gap: 0.75rem;
 }
 .genre-btn {
     background: var(--card-color); 
     border: 1px solid var(--glass-border);
     color: var(--text-dark); 
     padding: 0.6rem 1.2rem; 
-    border-radius: 20px; /* Más redondeado */
+    border-radius: 20px;
     cursor: pointer; 
     transition: all 0.2s ease;
     font-size: 0.9rem;
@@ -142,13 +141,13 @@ header h1:hover { transform: scale(1.05); }
 /* TÍTULO DE SECCIÓN */
 .section-header {
     text-align: center;
-    margin: 2rem 0 1.5rem; /* Ajuste el margen inferior */
+    margin: 2rem 0 1.5rem;
 }
 
 #section-title {
     font-size: 2rem;
     color: var(--sena-orange);
-    text-shadow: 0 0 10px rgb(157, 100, 80);
+    text-shadow: 0 0 10px rgba(255, 103, 25, 0.3);
 }
 
 /* ---------------------------------------------------- */
@@ -157,11 +156,10 @@ header h1:hover { transform: scale(1.05); }
 
 .results-grid {
     display: grid; 
-    /* Mejorado el grid para mejor responsividad */
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
     gap: 1.5rem; 
     min-height: 300px;
-    padding: 0 0.5rem; /* Pequeño padding para evitar que toque los bordes en móvil */
+    padding: 0 0.5rem;
 }
 
 .movie-card {
@@ -182,7 +180,7 @@ header h1:hover { transform: scale(1.05); }
     width: 100%; 
     display: block; 
     height: auto; 
-    aspect-ratio: 2/3; /* Asegura proporción de póster */
+    aspect-ratio: 2/3;
     object-fit: cover;
 }
 
@@ -191,12 +189,17 @@ header h1:hover { transform: scale(1.05); }
     position: absolute;
     top: 10px;
     right: 10px;
-    background: rgba(0, 0, 0, 0.7); /* Ligeramente más transparente */
+    background: rgba(0, 0, 0, 0.7);
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
     font-size: 0.85rem;
-    backdrop-filter: blur(4px); /* Suaviza el fondo */
-    line-height: 1; /* Asegura que el emoji esté bien centrado */
+    backdrop-filter: blur(4px);
+    line-height: 1;
+}
+
+/* CORRECCIÓN: Permite múltiples badges */
+.movie-status:nth-of-type(2) {
+    right: 50px;
 }
 
 .movie-info { padding: 1rem; }
@@ -205,13 +208,13 @@ header h1:hover { transform: scale(1.05); }
     margin-bottom: 0.5rem;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* Para títulos largos */
+    text-overflow: ellipsis;
 }
 .movie-info p { font-size: 0.9rem; color: var(--text-dark); }
 
 .empty-message {
     text-align: center;
-    grid-column: 1 / -1; /* Ocupa todo el ancho del grid */
+    grid-column: 1 / -1;
     padding: 3rem;
     color: var(--text-dark);
     font-size: 1.2rem;
@@ -232,7 +235,7 @@ header h1:hover { transform: scale(1.05); }
     width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.2);
     border-top-color: var(--sena-orange); border-radius: 50%;
     animation: spin 1s linear infinite; margin: 3rem auto;
-    grid-column: 1 / -1; /* Centrado en el grid */
+    grid-column: 1 / -1;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -260,7 +263,7 @@ header h1:hover { transform: scale(1.05); }
 }
 
 /* ---------------------------------------------------- */
-/* SECCIÓN DE RECOMENDACIONES (ASIDE) */
+/* SECCIÓN DE RECOMENDACIONES */
 /* ---------------------------------------------------- */
 
 .recommendation-section {
@@ -283,12 +286,12 @@ header h1:hover { transform: scale(1.05); }
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.75rem; /* Ajuste el espaciado */
+    gap: 0.75rem;
     margin: 1.5rem 0;
 }
 
 .genre-selector select {
-    appearance: none; /* Elimina estilos nativos en algunos navegadores */
+    appearance: none;
     background: var(--card-color);
     color: var(--text-light);
     border: 2px solid var(--sena-orange);
@@ -324,7 +327,7 @@ header h1:hover { transform: scale(1.05); }
     padding: 1.5rem;
     margin-top: 1.5rem;
     display: none;
-    text-align: left; /* Alineación del contenido del detalle */
+    text-align: left;
 }
 
 .recommended-movie.show {
@@ -354,7 +357,7 @@ header h1:hover { transform: scale(1.05); }
     display: flex;
     gap: 1.5rem;
     align-items: flex-start;
-    flex-wrap: nowrap; /* Evita que los detalles se envuelvan a menos que el breakpoint lo fuerce */
+    flex-wrap: nowrap;
 }
 
 .recommended-poster {
@@ -390,7 +393,6 @@ header h1:hover { transform: scale(1.05); }
 /* MODAL */
 /* ---------------------------------------------------- */
 
-/* 💡 NUEVA REGLA PARA DESHABILITAR EL SCROLL DEL CUERPO (FIX) */
 body.modal-open {
     overflow: hidden;
 }
@@ -398,8 +400,8 @@ body.modal-open {
 .modal-overlay {
     position: fixed; top: 0; left: 0; z-index: 1000;
     width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.85); /* Opacidad aumentada */
-    backdrop-filter: blur(10px); /* Desenfoque mejorado */
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
     display: flex; 
     justify-content: center; 
     align-items: center;
@@ -410,13 +412,12 @@ body.modal-open {
 .modal-overlay.active { 
     opacity: 1; 
     visibility: visible; 
-    display: flex; 
 }
 .modal-content {
     background: var(--card-color); 
     border-radius: 17px;
     width: 100%; 
-    max-width: 950px; /* Ancho un poco mayor */
+    max-width: 950px;
     max-height: 95vh;
     overflow-y: auto; 
     position: relative;
@@ -427,15 +428,16 @@ body.modal-open {
 }
 .modal-overlay.active .modal-content { transform: scale(1); }
 .close-modal {
-    position: sticky; /* Sticky para que siempre esté visible al hacer scroll */
+    position: sticky;
     top: 0; 
     right: 0;
     margin: 10px;
-    font-size: 2.5rem; /* Más grande */
+    font-size: 2.5rem;
     color: var(--sena-orange); 
     cursor: pointer; 
     z-index: 10;
     background: rgba(36, 36, 36, 0.9);
+    border: none;
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -444,6 +446,10 @@ body.modal-open {
     align-items: center;
     line-height: 1;
     float: right;
+    transition: transform 0.2s;
+}
+.close-modal:hover {
+    transform: scale(1.1);
 }
 #modal-body { padding: 2rem; }
 
@@ -456,7 +462,7 @@ body.modal-open {
     align-items: flex-start;
 }
 .modal-poster { 
-    width: 250px; /* Tamaño del póster un poco mayor */
+    width: 250px;
     border-radius: 10px; 
     flex-shrink: 0; 
     aspect-ratio: 2/3;
@@ -469,10 +475,10 @@ body.modal-open {
 .modal-header h2 { font-size: 1.8rem; margin-bottom: 0.5rem; }
 .modal-header p { margin-bottom: 0.5rem; color: var(--text-dark); line-height: 1.5; }
 
-/* STATS DEL MODAL (Nuevo y mejorado) */
+/* STATS DEL MODAL */
 .modal-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); /* Min-width ajustado */
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 1.5rem;
     margin: 2rem 0;
 }
@@ -490,16 +496,17 @@ body.modal-open {
 }
 
 .stat-value {
-    font-size: 1.6rem;
+    font-size: 1.3rem;
     font-weight: bold;
     color: var(--sena-orange);
     display: block;
+    margin-bottom: 0.5rem;
+    word-break: break-word;
 }
 
 .stat-label {
     font-size: 0.85rem;
     color: var(--text-dark);
-    margin-top: 0.5rem;
 }
 
 /* BOTONES DE ACCIÓN EN EL MODAL */
@@ -511,7 +518,7 @@ body.modal-open {
 }
 
 .action-btn {
-    flex-grow: 1;
+    flex: 1;
     min-width: 180px;
     background: var(--card-color);
     color: var(--text-light);
@@ -537,20 +544,31 @@ body.modal-open {
 
 /* Estilos específicos para favoritos y visto */
 .action-btn:first-child { border-color: var(--favorite-color); }
-.action-btn:first-child.active { background: var(--favorite-color); border-color: var(--favorite-color); }
+.action-btn:first-child.active { 
+    background: var(--favorite-color); 
+    border-color: var(--favorite-color); 
+}
 .action-btn:last-child { border-color: var(--watched-color); }
-.action-btn:last-child.active { background: var(--watched-color); border-color: var(--watched-color); }
+.action-btn:last-child.active { 
+    background: var(--watched-color); 
+    border-color: var(--watched-color); 
+}
 
 .modal-section { margin-top: 2.5rem; }
 .modal-section h3 { 
     margin-bottom: 1.5rem; 
-    border-left: 4px solid var(--sena-orange); /* Línea más gruesa */
+    border-left: 4px solid var(--sena-orange);
     padding-left: 0.75rem; 
     font-size: 1.5rem;
 }
 
 /* TRAILER */
-.modal-trailer iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 10px; }
+.modal-trailer iframe { 
+    width: 100%; 
+    aspect-ratio: 16/9; 
+    border: none; 
+    border-radius: 10px; 
+}
 
 /* PROVEEDORES DE STREAMING */
 .production-companies {
@@ -570,12 +588,11 @@ body.modal-open {
     filter: brightness(1.1);
 }
 
-/* PALABRAS CLAVE (KEYWORDS) */
+/* PALABRAS CLAVE */
 .keywords-list {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
-    margin-top: 1rem;
 }
 
 .keyword-tag {
@@ -596,24 +613,31 @@ body.modal-open {
     background: rgba(0,0,0,0.2); 
     padding: 1.5rem;
     border-radius: 10px; 
-    border-left: 3px solid var(--sena-orange); /* Cambio de color */
+    border-left: 3px solid var(--sena-orange);
     margin-bottom: 1.5rem;
 }
-.review-card p { font-size: 0.95rem; color: var(--text-dark); }
+.review-card p { font-size: 0.95rem; color: var(--text-dark); margin-top: 1rem; }
 .review-card .author { 
     font-weight: bold; 
     color: var(--text-light); 
-    margin-top: 1rem; 
     display: block; 
     font-style: italic;
+}
+.review-card a {
+    color: var(--sena-orange);
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 0.5rem;
+}
+.review-card a:hover {
+    text-decoration: underline;
 }
 
 /* PELÍCULAS SIMILARES */
 .similar-movies {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Min-width ajustado */
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: 1rem;
-    margin-top: 1rem;
 }
 
 .similar-movie {
@@ -658,7 +682,7 @@ body.modal-open {
 .tmdb-logo { width: 80px; margin-top: 1rem; opacity: 0.6; }
 
 /* ---------------------------------------------------- */
-/* RESPONSIVE DESIGN (Media Queries) */
+/* RESPONSIVE DESIGN */
 /* ---------------------------------------------------- */
 
 @media (max-width: 900px) {
@@ -681,7 +705,6 @@ body.modal-open {
         width: 100%;
     }
 
-    /* Modal Responsive */
     .modal-header {
         flex-direction: column;
         text-align: center;
@@ -704,7 +727,6 @@ body.modal-open {
         grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
     }
     
-    /* Recomendaciones Responsive */
     .recommended-details {
         flex-direction: column;
         text-align: center;
@@ -724,22 +746,25 @@ body.modal-open {
     }
     
     .action-btn {
-        flex: 1;
         min-width: 150px;
     }
 }
 
 @media (max-width: 500px) {
     .results-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Tarjetas más pequeñas en móvil */
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
 
     .modal-stats {
-        grid-template-columns: 1fr; /* Una columna para pantallas muy pequeñas */
+        grid-template-columns: 1fr;
     }
     
     .genre-selector {
         flex-direction: column;
         gap: 1rem;
+    }
+    
+    .genre-selector select {
+        width: 100%;
     }
 }
