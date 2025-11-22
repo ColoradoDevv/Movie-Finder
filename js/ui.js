@@ -1,8 +1,18 @@
 import { imageBaseUrl } from './config.js';
 import { isFavorite, isWatched } from './storage.js';
 import { formatDate, resultsGrid } from './utils.js';
+import { uiLogger } from './logger.js';
+
+uiLogger.info('🎨 Módulo UI inicializado');
 
 export function createMovieCard(movie) {
+    if (!movie || !movie.id) {
+        uiLogger.error('Datos de película inválidos:', movie);
+        return null;
+    }
+
+    uiLogger.debug(`Creando tarjeta para: "${movie.title}" (ID: ${movie.id})`);
+
     const card = document.createElement('div');
     card.className = 'movie-card';
     card.dataset.movieId = movie.id;
@@ -18,31 +28,90 @@ export function createMovieCard(movie) {
 
     const favoriteMark = isFavorite(movie.id) ? `<span class="movie-status" style="color: #e50914;">${favoriteIcon}</span>` : '';
     const watchedMark = isWatched(movie.id) ? `<span class="movie-status" style="color: #46d369;">${watchedIcon}</span>` : '';
-    const voteAverage = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
+    
+    // Validación de vote_average
+    const voteAverage = (movie.vote_average && movie.vote_average > 0) 
+        ? movie.vote_average.toFixed(1) 
+        : 'N/A';
+
+    // Validación de imagen
+    const posterUrl = movie.poster_path 
+        ? imageBaseUrl + movie.poster_path 
+        : 'https://via.placeholder.com/500x750/1f1f1f/808080?text=Sin+Poster';
 
     card.innerHTML = `
         ${favoriteMark}${watchedMark}
-        <img src="${movie.poster_path ? imageBaseUrl + movie.poster_path : 'https://via.placeholder.com/500x750?text=Sin+Poster'}" alt="${movie.title}">
+        <img src="${posterUrl}" alt="${movie.title || 'Película sin título'}" loading="lazy">
         <div class="movie-info">
-            <h3>${movie.title}</h3>
+            <h3>${movie.title || 'Sin título'}</h3>
             <p>${voteAverage} · ${formatDate(movie.release_date)}</p>
         </div>
     `;
+    
+    uiLogger.debug(`✓ Tarjeta creada: "${movie.title}"`);
     return card;
 }
 
 export function displayMovies(movies) {
+    if (!Array.isArray(movies) || movies.length === 0) {
+        uiLogger.warn('No hay películas para mostrar');
+        return;
+    }
+
+    uiLogger.info(`📋 Renderizando ${movies.length} películas...`);
+    uiLogger.time('Renderizado de películas');
+
     const fragment = document.createDocumentFragment();
-    movies.forEach(movie => fragment.appendChild(createMovieCard(movie)));
+    let successCount = 0;
+    let errorCount = 0;
+    
+    movies.forEach(movie => {
+        const card = createMovieCard(movie);
+        if (card) {
+            fragment.appendChild(card);
+            successCount++;
+        } else {
+            errorCount++;
+        }
+    });
+    
     resultsGrid.appendChild(fragment);
+    
+    uiLogger.timeEnd('Renderizado de películas');
+    uiLogger.success(`✓ ${successCount} tarjetas renderizadas exitosamente`);
+    
+    if (errorCount > 0) {
+        uiLogger.warn(`⚠️ ${errorCount} tarjetas fallaron al renderizar`);
+    }
 }
 
 export function displayRecommendedMovie(movie) {
-    document.getElementById('recommended-poster').src = movie.poster_path ? imageBaseUrl + movie.poster_path : '';
-    document.getElementById('recommended-poster').alt = movie.title;
-    document.getElementById('recommended-title').textContent = movie.title;
-    document.getElementById('recommended-overview').textContent = movie.overview || 'Sin descripción disponible';
-    document.getElementById('recommended-rating').textContent = movie.vote_average.toFixed(1);
-    document.getElementById('recommended-year').textContent = formatDate(movie.release_date);
-    document.getElementById('recommended-movie').classList.add('show');
+    if (!movie) {
+        uiLogger.error('No se puede mostrar recomendación: película inválida');
+        return;
+    }
+
+    uiLogger.info(`🎲 Mostrando recomendación: "${movie.title}"`);
+
+    const posterUrl = movie.poster_path 
+        ? imageBaseUrl + movie.poster_path 
+        : 'https://via.placeholder.com/300x450/1f1f1f/808080?text=Sin+Poster';
+
+    const voteAverage = (movie.vote_average && movie.vote_average > 0) 
+        ? movie.vote_average.toFixed(1) 
+        : 'N/A';
+
+    try {
+        document.getElementById('recommended-poster').src = posterUrl;
+        document.getElementById('recommended-poster').alt = movie.title || 'Película recomendada';
+        document.getElementById('recommended-title').textContent = movie.title || 'Sin título';
+        document.getElementById('recommended-overview').textContent = movie.overview || 'Sin descripción disponible';
+        document.getElementById('recommended-rating').textContent = voteAverage;
+        document.getElementById('recommended-year').textContent = formatDate(movie.release_date);
+        document.getElementById('recommended-movie').classList.add('show');
+        
+        uiLogger.success(`✓ Recomendación mostrada: "${movie.title}" (${voteAverage}/10)`);
+    } catch (error) {
+        uiLogger.error('Error al mostrar recomendación:', error);
+    }
 }

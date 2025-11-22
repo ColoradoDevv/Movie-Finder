@@ -3,25 +3,64 @@ import { addToFavorites, removeFromFavorites, addToWatched, removeFromWatched, i
 import { formatDate } from './utils.js';
 const modal = document.getElementById('movie-modal');
 import { getMovieDetails } from './api.js';
+import { modalLogger } from './logger.js';
+
+// Referencias a los event listeners
+let currentFavoriteHandler = null;
+let currentWatchedHandler = null;
+let currentSimilarHandlers = [];
+
+modalLogger.info('🎭 Módulo de modal inicializado');
 
 export function openModal(details) {
+    if (!details || !details.id) {
+        modalLogger.error('Datos de película inválidos para el modal');
+        return;
+    }
+
+    modalLogger.info(`🎬 Abriendo modal para: "${details.title}" (ID: ${details.id})`);
+    modalLogger.time('Renderizado del modal');
+
     const modalBody = document.getElementById('modal-body');
     
     const trailer = details.videos?.results?.find(v => v.type === 'Trailer') || details.videos?.results?.[0] || null;
     const trailerEmbed = trailer ? `${youtubeBaseUrl}${trailer.key}` : null;
 
-    const genres = details.genres?.map(g => g.name).join(', ') || 'Sin género';
+    if (trailer) {
+        modalLogger.debug(`🎥 Tráiler encontrado: ${trailer.name || 'Sin nombre'}`);
+    } else {
+        modalLogger.warn('⚠️ No se encontró tráiler disponible');
+    }
 
+    const genres = details.genres?.map(g => g.name).join(', ') || 'Sin género';
     const isFav = isFavorite(details.id);
     const isWatch = isWatched(details.id);
 
+    modalLogger.debug('Estado de la película:', {
+        favorito: isFav ? 'SÍ' : 'NO',
+        vista: isWatch ? 'SÍ' : 'NO'
+    });
+
     const providers = details['watch/providers']?.results?.CO?.flatrate || details['watch/providers']?.results?.ES?.flatrate || [];
-
     const movieKeywords = details.keywords?.keywords || [];
-
     const movieReviews = details.reviews?.results || [];
-
     const similarMovies = details.similar?.results?.slice(0, 12) || [];
+
+    modalLogger.debug('Contenido adicional:', {
+        proveedores: providers.length,
+        keywords: movieKeywords.length,
+        reseñas: movieReviews.length,
+        similares: similarMovies.length
+    });
+
+    // Validaciones
+    const voteAverage = (details.vote_average && details.vote_average > 0) 
+        ? details.vote_average.toFixed(1) 
+        : 'N/A';
+
+    const posterUrl = details.poster_path 
+        ? imageBaseUrl + details.poster_path 
+        : 'https://via.placeholder.com/300x450/1f1f1f/808080?text=Sin+Poster';
 
     // Iconos SVG
     const heartIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -32,18 +71,14 @@ export function openModal(details) {
         <polyline points="20 6 9 17 4 12"></polyline>
     </svg>`;
 
-    const starIcon = `<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-    </svg>`;
-
     modalBody.innerHTML = `
         <div class="modal-header">
-            <img src="${details.poster_path ? imageBaseUrl + details.poster_path : 'https://via.placeholder.com/150x225?text=Sin+Poster'}" alt="${details.title}" class="modal-poster">
+            <img src="${posterUrl}" alt="${details.title}" class="modal-poster">
             <div>
-                <h2 id="modal-title">${details.title}</h2>
+                <h2 id="modal-title">${details.title || 'Sin título'}</h2>
                 <p><strong>Lanzamiento:</strong> ${formatDate(details.release_date)}</p>
                 <p><strong>Géneros:</strong> ${genres}</p>
-                <p><strong>Puntuación:</strong> ${details.vote_average.toFixed(1)} / 10</p>
+                <p><strong>Puntuación:</strong> ${voteAverage} / 10</p>
                 <p><strong>Duración:</strong> ${details.runtime || 'N/A'} min</p>
                 
                 <div class="movie-actions">
@@ -61,11 +96,11 @@ export function openModal(details) {
         
         <div class="modal-stats">
             <div class="stat-item">
-                <span class="stat-value">${details.original_title}</span>
+                <span class="stat-value">${details.original_title || details.title}</span>
                 <span class="stat-label">Título Original</span>
             </div>
             <div class="stat-item">
-                <span class="stat-value">${details.vote_count.toLocaleString()}</span>
+                <span class="stat-value">${(details.vote_count || 0).toLocaleString()}</span>
                 <span class="stat-label">Votos</span>
             </div>
             <div class="stat-item">
@@ -95,6 +130,7 @@ export function openModal(details) {
                         frameborder="0" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                         allowfullscreen
+                        loading="lazy"
                     ></iframe>
                 </div>
             </div>
@@ -105,7 +141,7 @@ export function openModal(details) {
                 <h3>Disponible en streaming</h3>
                 <div class="production-companies">
                     ${providers.map(p => `
-                        <img src="${imageBaseUrl + p.logo_path}" alt="${p.provider_name}" title="${p.provider_name}" class="company-logo">
+                        <img src="${imageBaseUrl + p.logo_path}" alt="${p.provider_name}" title="${p.provider_name}" class="company-logo" loading="lazy">
                     `).join('')}
                 </div>
             </div>
@@ -125,9 +161,9 @@ export function openModal(details) {
                 <h3>Reseñas de usuarios</h3>
                 ${movieReviews.slice(0, 3).map(r => `
                     <div class="review-card">
-                        <span class="author">${r.author}</span>
+                        <span class="author">${r.author || 'Anónimo'}</span>
                         <p>${r.content.substring(0, 300)}${r.content.length > 300 ? '...' : ''}</p>
-                        <a href="${r.url}" target="_blank" rel="noopener noreferrer">Leer reseña completa</a>
+                        ${r.url ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer">Leer reseña completa</a>` : ''}
                     </div>
                 `).join('')}
             </div>
@@ -139,7 +175,7 @@ export function openModal(details) {
                 <div class="similar-movies">
                     ${similarMovies.map(m => `
                         <div class="similar-movie" data-movie-id="${m.id}" title="${m.title}">
-                            <img src="${m.poster_path ? imageBaseUrl + m.poster_path : 'https://via.placeholder.com/150x225?text=Sin+Poster'}" alt="${m.title}">
+                            <img src="${m.poster_path ? imageBaseUrl + m.poster_path : 'https://via.placeholder.com/220x330/1f1f1f/808080?text=Sin+Poster'}" alt="${m.title}" loading="lazy">
                             <p>${m.title}</p>
                         </div>
                     `).join('')}
@@ -151,11 +187,19 @@ export function openModal(details) {
     modal.classList.add('active');
     document.body.classList.add('modal-open');
 
+    modalLogger.timeEnd('Renderizado del modal');
+    modalLogger.success(`✓ Modal abierto exitosamente para "${details.title}"`);
+
+    // Remover event listeners anteriores
+    cleanupEventListeners();
+
     // Event listeners para botones
     const favoriteBtn = modalBody.querySelector('[data-action="favorite"]');
     const watchedBtn = modalBody.querySelector('[data-action="watched"]');
 
-    favoriteBtn.addEventListener('click', () => {
+    currentFavoriteHandler = () => {
+        modalLogger.info(`${isFavorite(details.id) ? '🗑️ Removiendo' : '❤️ Añadiendo'} "${details.title}" de favoritos`);
+        
         if (isFavorite(details.id)) {
             removeFromFavorites(details.id);
         } else {
@@ -163,9 +207,11 @@ export function openModal(details) {
         }
         openModal(details);
         modal.dispatchEvent(new CustomEvent('movie-state-changed'));
-    });
+    };
 
-    watchedBtn.addEventListener('click', () => {
+    currentWatchedHandler = () => {
+        modalLogger.info(`${isWatched(details.id) ? '🗑️ Removiendo' : '✅ Marcando'} "${details.title}" como vista`);
+        
         if (isWatched(details.id)) {
             removeFromWatched(details.id);
         } else {
@@ -173,14 +219,39 @@ export function openModal(details) {
         }
         openModal(details);
         modal.dispatchEvent(new CustomEvent('movie-state-changed'));
-    });
+    };
+
+    favoriteBtn.addEventListener('click', currentFavoriteHandler);
+    watchedBtn.addEventListener('click', currentWatchedHandler);
 
     // Películas similares
-    modalBody.querySelectorAll('.similar-movie').forEach(el => {
-        el.addEventListener('click', () => {
-            getMovieDetails(el.dataset.movieId).then(data => {
-                if (data) openModal(data);
-            });
-        });
+    const similarElements = modalBody.querySelectorAll('.similar-movie');
+    modalLogger.debug(`📎 Adjuntando ${similarElements.length} listeners a películas similares`);
+    
+    similarElements.forEach(el => {
+        const handler = () => {
+            const movieId = el.dataset.movieId;
+            if (movieId) {
+                modalLogger.info(`🔄 Cargando película similar ID: ${movieId}`);
+                getMovieDetails(movieId).then(data => {
+                    if (data) openModal(data);
+                });
+            }
+        };
+        el.addEventListener('click', handler);
+        currentSimilarHandlers.push({ element: el, handler });
     });
+}
+
+function cleanupEventListeners() {
+    if (currentSimilarHandlers.length > 0) {
+        modalLogger.debug(`🧹 Limpiando ${currentSimilarHandlers.length} event listeners`);
+        currentSimilarHandlers.forEach(({ element, handler }) => {
+            element.removeEventListener('click', handler);
+        });
+        currentSimilarHandlers = [];
+    }
+    
+    currentFavoriteHandler = null;
+    currentWatchedHandler = null;
 }
