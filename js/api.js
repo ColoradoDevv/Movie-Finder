@@ -106,3 +106,106 @@ export async function getMovieDetails(movieId) {
     
     return data;
 }
+
+// ============================================
+// NUEVAS FUNCIONES DE BÚSQUEDA MEJORADA
+// ============================================
+
+/**
+ * Busca personas (actores/directores) por nombre
+ * @param {string} query - Nombre a buscar
+ * @param {number} page - Número de página
+ * @returns {Promise} - Resultados de personas
+ */
+export async function searchPerson(query, page = 1) {
+    apiLogger.info(`👤 Buscando persona: "${query}"`);
+    const endpoint = `search/person?query=${encodeURIComponent(query)}&page=${page}`;
+    const data = await fetchFromAPI(endpoint);
+    
+    if (data && data.results) {
+        apiLogger.success(`✓ ${data.results.length} personas encontradas para "${query}"`);
+    } else {
+        apiLogger.warn(`Sin resultados de personas para: "${query}"`);
+    }
+    
+    return data;
+}
+
+/**
+ * Obtiene películas de un actor específico
+ * @param {number} personId - ID de la persona
+ * @returns {Promise} - Películas del actor
+ */
+export async function getMoviesByPerson(personId) {
+    if (!personId || isNaN(personId)) {
+        apiLogger.error('ID de persona inválido:', personId);
+        return null;
+    }
+    
+    apiLogger.info(`🎭 Obteniendo películas de persona ID: ${personId}`);
+    const data = await fetchFromAPI(`person/${personId}/movie_credits`);
+    
+    if (data && data.cast) {
+        apiLogger.success(`✓ ${data.cast.length} películas encontradas como actor`);
+    }
+    if (data && data.crew) {
+        apiLogger.success(`✓ ${data.crew.filter(c => c.job === 'Director').length} películas como director`);
+    }
+    
+    return data;
+}
+
+/**
+ * Búsqueda inteligente multi-tipo
+ * Busca tanto películas como personas y devuelve resultados combinados
+ * @param {string} query - Término de búsqueda
+ * @param {number} page - Número de página
+ * @returns {Promise} - Objeto con resultados de películas y personas
+ */
+export async function multiSearch(query, page = 1) {
+    apiLogger.info(`🔍 Búsqueda multi-tipo: "${query}"`);
+    const endpoint = `search/multi?query=${encodeURIComponent(query)}&page=${page}`;
+    const data = await fetchFromAPI(endpoint);
+    
+    if (data && data.results) {
+        const movies = data.results.filter(r => r.media_type === 'movie');
+        const people = data.results.filter(r => r.media_type === 'person');
+        
+        apiLogger.success(`✓ Búsqueda multi: ${movies.length} películas, ${people.length} personas`);
+        apiLogger.debug('Desglose de resultados:', {
+            películas: movies.length,
+            personas: people.length,
+            otros: data.results.length - movies.length - people.length
+        });
+        
+        return {
+            ...data,
+            movies,
+            people
+        };
+    }
+    
+    return data;
+}
+
+/**
+ * Descubre películas por actor/director
+ * @param {number} personId - ID de la persona
+ * @param {string} role - 'cast' para actor, 'crew' para director
+ * @param {number} page - Número de página
+ * @returns {Promise} - Películas descubiertas
+ */
+export async function discoverByPerson(personId, role = 'cast', page = 1) {
+    apiLogger.info(`🎬 Descubriendo películas por persona ID: ${personId} (${role})`);
+    
+    const param = role === 'cast' ? 'with_cast' : 'with_crew';
+    const endpoint = `discover/movie?${param}=${personId}&sort_by=popularity.desc&page=${page}`;
+    
+    const data = await fetchFromAPI(endpoint);
+    
+    if (data && data.results) {
+        apiLogger.success(`✓ ${data.results.length} películas descubiertas`);
+    }
+    
+    return data;
+}

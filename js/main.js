@@ -218,33 +218,44 @@ searchButton.addEventListener('click', async () => {
     }
     
     try {
-        mainLogger.info(`🔍 Búsqueda iniciada: "${query}"`);
+        mainLogger.info(`🔍 Búsqueda inteligente iniciada: "${query}"`);
         
         currentSection = 'search';
-        currentEndpoint = `search/movie?query=${encodeURIComponent(query)}`;
-        sectionTitle.textContent = `Resultados: "${query}"`;
-
+        
         if (activeGenre) {
             activeGenre.classList.remove('active');
             activeGenre = null;
         }
 
         showLoader();
-        const data = await getMovies(currentEndpoint, 1);
+        
+        // Importar dinámicamente el módulo de búsqueda
+        const { intelligentSearch, processSearchResults } = await import('./search.js');
+        
+        const searchResults = await intelligentSearch(query, 1);
         hideLoader();
         
-        if (data) {
-            clearResults();
-            if (data.results && data.results.length > 0) {
-                displayMovies(data.results);
-                currentPage = 1;
-                totalPages = data.total_pages;
+        if (searchResults) {
+            // Procesar y mostrar resultados
+            await processSearchResults(searchResults, query);
+            
+            // Actualizar paginación
+            currentPage = searchResults.page;
+            totalPages = searchResults.total_pages;
+            
+            // Guardar el endpoint para "cargar más"
+            if (searchResults.searchType === 'movie' || searchResults.searchType === 'mixed') {
+                currentEndpoint = `search/movie?query=${encodeURIComponent(query)}`;
                 loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-                mainLogger.success(`✓ ${data.results.length} resultados encontrados para "${query}"`);
             } else {
-                showEmptyMessage(`No se encontraron resultados para "${query}"`);
-                mainLogger.warn(`Sin resultados para: "${query}"`);
+                // Para búsquedas de personas, no mostrar "cargar más"
+                loadMoreButton.style.display = 'none';
             }
+            
+            mainLogger.success(`✓ Búsqueda completada: ${searchResults.movies?.length || 0} películas, ${searchResults.people?.length || 0} personas`);
+        } else {
+            showEmptyMessage(`No se encontraron resultados para "${query}"`);
+            mainLogger.warn(`Sin resultados para: "${query}"`);
         }
     } catch (error) {
         hideLoader();

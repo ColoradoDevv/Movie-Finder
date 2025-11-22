@@ -1,0 +1,286 @@
+import { multiSearch, getMoviesByPerson, discoverByPerson } from './api.js';
+import { displayMovies } from './ui.js';
+import { clearResults, showEmptyMessage, sectionTitle } from './utils.js';
+import Logger from './logger.js';
+
+const searchLogger = new Logger('SEARCH');
+
+searchLogger.info('🔍 Módulo de búsqueda inteligente inicializado');
+
+/**
+ * Realiza una búsqueda inteligente que detecta si es película o persona
+ * @param {string} query - Término de búsqueda
+ * @param {number} page - Página actual
+ * @returns {Promise<Object>} - Resultados y metadatos
+ */
+export async function intelligentSearch(query, page = 1) {
+    searchLogger.info(`🧠 Búsqueda inteligente iniciada: "${query}"`);
+    searchLogger.time('Búsqueda inteligente');
+    
+    try {
+        // Realizar búsqueda multi-tipo
+        const results = await multiSearch(query, page);
+        
+        if (!results) {
+            searchLogger.error('No se obtuvieron resultados de la búsqueda');
+            return null;
+        }
+
+        const { movies, people, total_results, total_pages } = results;
+        
+        searchLogger.debug('Análisis de resultados:', {
+            películas: movies?.length || 0,
+            personas: people?.length || 0,
+            total: total_results
+        });
+
+        // Determinar el tipo de búsqueda predominante
+        const searchType = analyzeSearchType(movies, people);
+        
+        searchLogger.info(`📊 Tipo de búsqueda detectado: ${searchType}`);
+        searchLogger.timeEnd('Búsqueda inteligente');
+
+        return {
+            movies: movies || [],
+            people: people || [],
+            searchType,
+            total_results,
+            total_pages,
+            page: results.page
+        };
+    } catch (error) {
+        searchLogger.error('Error en búsqueda inteligente:', error);
+        searchLogger.timeEnd('Búsqueda inteligente');
+        return null;
+    }
+}
+
+/**
+ * Analiza los resultados para determinar el tipo de búsqueda
+ * @param {Array} movies - Películas encontradas
+ * @param {Array} people - Personas encontradas
+ * @returns {string} - Tipo de búsqueda: 'movie', 'person', o 'mixed'
+ */
+function analyzeSearchType(movies, people) {
+    const movieCount = movies?.length || 0;
+    const peopleCount = people?.length || 0;
+    
+    if (peopleCount === 0 && movieCount > 0) {
+        return 'movie';
+    }
+    
+    if (movieCount === 0 && peopleCount > 0) {
+        return 'person';
+    }
+    
+    // Si hay más personas que películas, probablemente buscan un actor/director
+    if (peopleCount > movieCount) {
+        return 'person';
+    }
+    
+    // Si hay resultados mixtos pero equilibrados
+    if (movieCount > 0 && peopleCount > 0) {
+        return 'mixed';
+    }
+    
+    return 'unknown';
+}
+
+/**
+ * Procesa los resultados de búsqueda y los muestra
+ * @param {Object} searchResults - Resultados de intelligentSearch
+ * @param {string} query - Término de búsqueda original
+ */
+export async function processSearchResults(searchResults, query) {
+    if (!searchResults) {
+        searchLogger.warn('No hay resultados para procesar');
+        showEmptyMessage(`No se encontraron resultados para "${query}"`);
+        return;
+    }
+
+    const { movies, people, searchType } = searchResults;
+    
+    searchLogger.info(`🎯 Procesando resultados de tipo: ${searchType}`);
+
+    switch (searchType) {
+        case 'movie':
+            // Solo películas
+            searchLogger.debug('Mostrando solo películas');
+            sectionTitle.textContent = `Películas: "${query}"`;
+            clearResults();
+            displayMovies(movies);
+            break;
+            
+        case 'person':
+            // Principalmente personas - mostrar opción de ver sus películas
+            searchLogger.debug('Búsqueda de persona detectada');
+            await handlePersonSearch(people, query);
+            break;
+            
+        case 'mixed':
+            // Resultados mixtos - priorizar películas pero informar sobre personas
+            searchLogger.debug('Resultados mixtos detectados');
+            await handleMixedSearch(movies, people, query);
+            break;
+            
+        default:
+            searchLogger.warn('Tipo de búsqueda desconocido');
+            showEmptyMessage(`No se encontraron resultados para "${query}"`);
+    }
+}
+
+/**
+ * Maneja búsquedas que son principalmente de personas
+ * @param {Array} people - Personas encontradas
+ * @param {string} query - Término de búsqueda
+ */
+async function handlePersonSearch(people, query) {
+    searchLogger.info(`👤 Manejando búsqueda de persona: ${people.length} resultados`);
+    
+    if (people.length === 0) {
+        showEmptyMessage(`No se encontraron actores o directores con el nombre "${query}"`);
+        return;
+    }
+
+    // Tomar la persona más relevante (primera del resultado)
+    const topPerson = people[0];
+    
+    searchLogger.info(`🎭 Persona principal: ${topPerson.name} (ID: ${topPerson.id})`);
+    
+    // Mostrar mensaje de carga personalizado
+    clearResults();
+    sectionTitle.innerHTML = `
+        <span>Películas de <strong>${topPerson.name}</strong></span>
+        <span style="font-size: 0.8em; color: var(--text-secondary); margin-left: 1rem;">
+            ${topPerson.known_for_department || 'Actuación/Dirección'}
+        </span>
+    `;
+    
+    // Obtener películas de esta persona
+    const credits = await getMoviesByPerson(topPerson.id);
+    
+    if (!credits) {
+        showEmptyMessage(`No se pudieron cargar las películas de ${topPerson.name}`);
+        return;
+    }
+
+    // Combinar películas como actor y director
+    let allMovies = [];
+    
+    if (credits.cast) {
+        searchLogger.debug(`${credits.cast.length} películas como actor`);
+        allMovies = [...credits.cast];
+    }
+    
+    if (credits.crew) {
+        const directedMovies = credits.crew.filter(c => c.job === 'Director');
+        searchLogger.debug(`${directedMovies.length} películas como director`);
+        allMovies = [...allMovies, ...directedMovies];
+    }
+
+    // Eliminar duplicados por ID
+    const uniqueMovies = Array.from(new Map(allMovies.map(m => [m.id, m])).values());
+    
+    // Ordenar por popularidad
+    uniqueMovies.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    
+    searchLogger.success(`✓ ${uniqueMovies.length} películas únicas encontradas`);
+
+    if (uniqueMovies.length === 0) {
+        showEmptyMessage(`${topPerson.name} no tiene películas registradas en TMDB`);
+        return;
+    }
+
+    // Mostrar las películas
+    clearResults();
+    displayMovies(uniqueMovies.slice(0, 60)); // Limitar a 60 para rendimiento
+    
+    // Mostrar información adicional si hay más personas
+    if (people.length > 1) {
+        searchLogger.info(`ℹ️ También se encontraron ${people.length - 1} personas adicionales`);
+        addPersonSuggestions(people.slice(1, 4), query);
+    }
+}
+
+/**
+ * Maneja búsquedas con resultados mixtos
+ * @param {Array} movies - Películas encontradas
+ * @param {Array} people - Personas encontradas
+ * @param {string} query - Término de búsqueda
+ */
+async function handleMixedSearch(movies, people, query) {
+    searchLogger.info(`🎭 Manejando búsqueda mixta: ${movies.length} películas, ${people.length} personas`);
+    
+    // Mostrar películas primero
+    sectionTitle.innerHTML = `
+        <span>Resultados para "${query}"</span>
+        <span style="font-size: 0.8em; color: var(--text-secondary); margin-left: 1rem;">
+            ${movies.length} películas, ${people.length} actores/directores
+        </span>
+    `;
+    
+    clearResults();
+    displayMovies(movies);
+    
+    // Agregar sugerencias de personas al final
+    if (people.length > 0) {
+        addPersonSuggestions(people.slice(0, 3), query);
+    }
+}
+
+/**
+ * Agrega sugerencias de personas al final de los resultados
+ * @param {Array} people - Personas sugeridas
+ * @param {string} query - Término de búsqueda
+ */
+function addPersonSuggestions(people, query) {
+    searchLogger.debug(`💡 Agregando ${people.length} sugerencias de personas`);
+    
+    const resultsGrid = document.getElementById('results-grid');
+    const suggestionBox = document.createElement('div');
+    suggestionBox.className = 'person-suggestions';
+    suggestionBox.innerHTML = `
+        <div class="suggestion-header">
+            <h3>¿Buscabas a alguna de estas personas?</h3>
+        </div>
+        <div class="person-grid">
+            ${people.map(person => `
+                <div class="person-card" data-person-id="${person.id}" data-person-name="${person.name}">
+                    <img src="${person.profile_path ? 'https://image.tmdb.org/t/p/w185' + person.profile_path : 'https://via.placeholder.com/185x278/1f1f1f/808080?text=Sin+Foto'}" 
+                         alt="${person.name}"
+                         loading="lazy">
+                    <div class="person-info">
+                        <h4>${person.name}</h4>
+                        <p>${person.known_for_department || 'Actuación'}</p>
+                        ${person.known_for ? `<p class="known-for">Conocido por: ${person.known_for.slice(0, 2).map(m => m.title || m.name).join(', ')}</p>` : ''}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    resultsGrid.appendChild(suggestionBox);
+    
+    // Agregar event listeners a las tarjetas de personas
+    suggestionBox.querySelectorAll('.person-card').forEach(card => {
+        card.addEventListener('click', async () => {
+            const personId = parseInt(card.dataset.personId);
+            const personName = card.dataset.personName;
+            
+            searchLogger.info(`👤 Usuario seleccionó a: ${personName}`);
+            
+            // Recargar la página con las películas de esta persona
+            const credits = await getMoviesByPerson(personId);
+            
+            if (credits) {
+                let allMovies = [...(credits.cast || []), ...(credits.crew || []).filter(c => c.job === 'Director')];
+                const uniqueMovies = Array.from(new Map(allMovies.map(m => [m.id, m])).values());
+                uniqueMovies.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+                
+                sectionTitle.textContent = `Películas de ${personName}`;
+                clearResults();
+                displayMovies(uniqueMovies.slice(0, 60));
+            }
+        });
+    });
+}
