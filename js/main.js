@@ -30,7 +30,6 @@ const historyButton = document.getElementById('history-button');
 const viewRecommendedDetails = document.getElementById('view-recommended-details');
 const recommendButton = document.getElementById('recommend-button');
 const recommendationGenreSelect = document.getElementById('recommendation-genre');
-const christmasMoviesButton = document.getElementById('christmas-movies-button');
 
 // Referencias a elementos de filtros
 const toggleFiltersBtn = document.getElementById('toggle-filters');
@@ -48,26 +47,6 @@ mainLogger.info(`Sección actual: ${currentSection}`);
 mainLogger.info(`Endpoint actual: ${currentEndpoint}`);
 mainLogger.info(`Página actual: ${currentPage}/${totalPages}`);
 mainLogger.groupEnd();
-
-// FUNCIÓN PARA CREAR EFECTO DE NIEVE
-function createSnowflakes() {
-    const snowflakesContainer = document.querySelector('.snowflakes');
-    const numberOfSnowflakes = 50;
-    
-    for (let i = 0; i < numberOfSnowflakes; i++) {
-        const snowflake = document.createElement('div');
-        snowflake.className = 'snowflake';
-        snowflake.innerHTML = '❄';
-        snowflake.style.left = Math.random() * 100 + '%';
-        snowflake.style.animationDuration = (Math.random() * 3 + 2) + 's';
-        snowflake.style.animationDelay = Math.random() * 5 + 's';
-        snowflake.style.fontSize = (Math.random() * 10 + 10) + 'px';
-        snowflake.style.opacity = Math.random() * 0.6 + 0.2;
-        snowflakesContainer.appendChild(snowflake);
-    }
-    
-    mainLogger.info('❄️ Efecto de nieve navideña creado');
-}
 
 // FUNCIÓN PARA APLICAR FILTROS Y ORDENAMIENTO
 function applyFiltersToMovies(movies) {
@@ -212,6 +191,8 @@ resetFiltersBtn.addEventListener('click', () => {
     
     mainLogger.success('✓ Filtros reseteados');
 });
+
+function updateGrid() {
     mainLogger.debug('🔄 Actualizando grid de películas...');
     
     if (currentSection === 'favorites') {
@@ -266,6 +247,7 @@ resetFiltersBtn.addEventListener('click', () => {
         mainLogger.timeEnd('Actualización de estados en grid');
         mainLogger.success('✓ Grid actualizado exitosamente');
     }
+}
 
 // CARGAR GÉNEROS CON DESTAQUE NAVIDEÑO
 async function initGenres() {
@@ -365,7 +347,7 @@ async function loadChristmasMovies() {
         currentSection = 'christmas';
         // Búsqueda directa por término "christmas" que es más efectiva
         currentEndpoint = 'search/movie?query=christmas';
-        sectionTitle.textContent = '🎄 Películas Navideñas 🎅';
+        sectionTitle.textContent = '🎄 Películas Navideñas';
         sectionTitle.classList.add('christmas-title');
         searchInput.value = '';
 
@@ -498,14 +480,6 @@ function displayHistory() {
 homeButton.addEventListener('click', () => {
     mainLogger.info('🏠 Botón Home presionado');
     loadPopularMovies();
-});
-
-// Botón de películas navideñas (en la sección destacada)
-christmasMoviesButton.addEventListener('click', () => {
-    mainLogger.info('🎄 Botón de películas navideñas presionado');
-    loadChristmasMovies();
-    // Scroll suave hacia el grid de resultados
-    document.getElementById('section-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 searchButton.addEventListener('click', async () => {
@@ -747,13 +721,10 @@ async function initApp() {
     mainLogger.time('Tiempo total de inicialización');
     
     try {
-        mainLogger.info('Paso 1: Creando efecto de nieve...');
-        createSnowflakes();
-        
-        mainLogger.info('Paso 2: Cargando géneros...');
+        mainLogger.info('Paso 1: Cargando géneros...');
         await initGenres();
         
-        mainLogger.info('Paso 3: Cargando películas populares...');
+        mainLogger.info('Paso 2: Cargando películas populares...');
         await loadPopularMovies();
         
         mainLogger.timeEnd('Tiempo total de inicialización');
@@ -777,4 +748,4 @@ async function initApp() {
 }
 
 mainLogger.info('⏳ Iniciando aplicación...');
-initApp();  
+initApp();
