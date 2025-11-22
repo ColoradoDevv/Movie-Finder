@@ -295,11 +295,21 @@ export function isMobileMenuActive() {
     return isMobileMenuOpen;
 }
 
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMobileNav);
-} else {
+/**
+ * Inicializa la navegación móvil de forma segura
+ * Se llama explícitamente desde main.js después de que el DOM esté listo
+ */
+export function initializeMobileNavigation() {
+    if (typeof window === 'undefined') return;
+    
+    // Solo inicializar una vez
+    if (window.__mobileNavInitialized) {
+        mainLogger.warn('Navegación móvil ya inicializada');
+        return;
+    }
+    
     initMobileNav();
+    window.__mobileNavInitialized = true;
 }
 
 // Exportar funciones públicas

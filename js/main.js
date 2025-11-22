@@ -5,7 +5,9 @@ import { getRandomMovie, currentRecommendedMovie, resetRecommendationHistory } f
 import { getFavorites, getWatchedMovies, isFavorite, isWatched } from './storage.js';
 import { showLoader, hideLoader, clearResults, showEmptyMessage, sectionTitle, resultsGrid, modal } from './utils.js';
 import { mainLogger } from './logger.js';
-import { syncNavigationState, updateNavigationBadges, isMobileDevice } from './mobile-nav.js';
+import { syncNavigationState, updateNavigationBadges, isMobileDevice, initializeMobileNavigation } from './mobile-nav.js';
+
+mainLogger.info('🚀 MovieFinder iniciando...');
 
 // Estado de la aplicación
 let currentPage = 1;
@@ -53,6 +55,61 @@ mainLogger.info(`Página actual: ${currentPage}/${totalPages}`);
 mainLogger.groupEnd();
 
 // ============================================
+// INICIALIZACIÓN
+// ============================================
+
+async function initApp() {
+    mainLogger.group('🚀 Inicialización de MovieFinder');
+    mainLogger.time('Tiempo total de inicialización');
+    
+    try {
+        // CRÍTICO: Inicializar navegación móvil PRIMERO
+        mainLogger.info('Paso 0: Inicializando navegación móvil...');
+        initializeMobileNavigation();
+        
+        mainLogger.info('Paso 1: Cargando géneros...');
+        await initGenres();
+        
+        mainLogger.info('Paso 2: Cargando películas populares...');
+        await loadPopularMovies();
+        
+        mainLogger.info('Paso 3: Sincronizando estado de navegación...');
+        syncNavigationState('popular');
+        
+        mainLogger.info('Paso 4: Actualizando badges...');
+        updateNavigationBadges(getFavorites().length, getWatchedMovies().length);
+        
+        mainLogger.timeEnd('Tiempo total de inicialización');
+        mainLogger.success('✅ MovieFinder inicializado correctamente');
+        mainLogger.groupEnd();
+        
+        // Resumen final
+        mainLogger.group('📊 Estado final de la aplicación');
+        mainLogger.info(`Sección: ${currentSection}`);
+        mainLogger.info(`Total páginas: ${totalPages}`);
+        mainLogger.info(`Favoritos: ${getFavorites().length}`);
+        mainLogger.info(`Vistas: ${getWatchedMovies().length}`);
+        mainLogger.info(`Dispositivo: ${isMobileDevice() ? 'Móvil' : 'Desktop'}`);
+        mainLogger.groupEnd();
+        
+    } catch (error) {
+        mainLogger.timeEnd('Tiempo total de inicialización');
+        mainLogger.error('❌ Error crítico al inicializar la aplicación:', error);
+        mainLogger.groupEnd();
+        showEmptyMessage('Error al cargar la aplicación. Recarga la página.');
+    }
+}
+
+// Esperar a que el DOM esté completamente cargado
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        mainLogger.info('⏳ DOM listo, iniciando aplicación...');
+        initApp();
+    });
+} else {
+    mainLogger.info('⏳ DOM ya listo, iniciando aplicación...');
+    initApp();
+}
 // FUNCIONES DE NAVEGACIÓN
 // ============================================
 
