@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MovieFinder - Explora películas populares, busca por género y descubre tu próxima película favorita">
-    <title>MovieFinder - Explora el Universo del Cine</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>MovieFinder - Explora el Universo del Cine 🎄</title>
+    <link rel="stylesheet" href="styles_christmas.css">
 </head>
 <body>
+    <!-- Efecto de nieve -->
+    <div class="snowflakes" aria-hidden="true"></div>
+    
     <div class="container">
         <header>
-            <div class="header-content">
+            <div class="header-content christmas-decoration">
                 <h1 id="home-button">MovieFinder</h1>
-                <p class="tagline">Descubre tu próxima película favorita</p>
+                <p class="tagline">Descubre tu próxima película favorita ❄️</p>
             </div>
             
             <!-- NAVEGACIÓN PRINCIPAL -->
@@ -45,6 +48,23 @@
             </div>
             <nav id="genre-nav" class="genre-nav" aria-label="Navegación por géneros"></nav>
         </header>
+        
+        <!-- SECCIÓN DESTACADA DE NAVIDAD -->
+        <section class="christmas-featured" aria-labelledby="christmas-title">
+            <div class="christmas-header">
+                <h2 id="christmas-title">
+                    <span class="christmas-icon">🎄</span>
+                    Especial de Navidad
+                    <span class="christmas-icon">🎅</span>
+                </h2>
+                <p class="christmas-subtitle">Las mejores películas para disfrutar en esta temporada mágica</p>
+            </div>
+            <div class="christmas-cta">
+                <button id="christmas-movies-button" class="christmas-button">
+                    ⭐ Explorar películas navideñas
+                </button>
+            </div>
+        </section>
         
         <!-- SECCIÓN DE RECOMENDACIONES -->
         <section class="recommendation-section" aria-labelledby="recommendation-title">
@@ -119,7 +139,7 @@
 
     <footer class="main-footer">
         <div class="footer-content">
-            <p class="footer-text">MovieFinder © 2024 - Desarrollado por ColoradoDevv</p>
+            <p class="footer-text">MovieFinder © 2024 - Desarrollado por ColoradoDevv 🎄</p>
             <p class="footer-disclaimer">Esta página utiliza la API de TMDB pero no está respaldada ni certificada por TMDB.</p>
             <img src="assets/images/logo-tmdb.svg" alt="Logo de The Movie Database" class="tmdb-logo">
         </div>

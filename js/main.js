@@ -24,6 +24,7 @@ const historyButton = document.getElementById('history-button');
 const viewRecommendedDetails = document.getElementById('view-recommended-details');
 const recommendButton = document.getElementById('recommend-button');
 const recommendationGenreSelect = document.getElementById('recommendation-genre');
+const christmasMoviesButton = document.getElementById('christmas-movies-button');
 
 mainLogger.info('🚀 MovieFinder iniciando...');
 mainLogger.group('Estado inicial de la aplicación');
@@ -31,6 +32,26 @@ mainLogger.info(`Sección actual: ${currentSection}`);
 mainLogger.info(`Endpoint actual: ${currentEndpoint}`);
 mainLogger.info(`Página actual: ${currentPage}/${totalPages}`);
 mainLogger.groupEnd();
+
+// FUNCIÓN PARA CREAR EFECTO DE NIEVE
+function createSnowflakes() {
+    const snowflakesContainer = document.querySelector('.snowflakes');
+    const numberOfSnowflakes = 50;
+    
+    for (let i = 0; i < numberOfSnowflakes; i++) {
+        const snowflake = document.createElement('div');
+        snowflake.className = 'snowflake';
+        snowflake.innerHTML = '❄';
+        snowflake.style.left = Math.random() * 100 + '%';
+        snowflake.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        snowflake.style.animationDelay = Math.random() * 5 + 's';
+        snowflake.style.fontSize = (Math.random() * 10 + 10) + 'px';
+        snowflake.style.opacity = Math.random() * 0.6 + 0.2;
+        snowflakesContainer.appendChild(snowflake);
+    }
+    
+    mainLogger.info('❄️ Efecto de nieve navideña creado');
+}
 
 // FUNCIÓN OPTIMIZADA PARA REFRESCAR LA LISTA
 function updateGrid() {
@@ -90,7 +111,7 @@ function updateGrid() {
     }
 }
 
-// CARGAR GÉNEROS
+// CARGAR GÉNEROS CON DESTAQUE NAVIDEÑO
 async function initGenres() {
     try {
         mainLogger.info('📂 Inicializando géneros...');
@@ -105,6 +126,15 @@ async function initGenres() {
 
         mainLogger.debug(`Procesando ${data.genres.length} géneros`);
 
+        // Crear botón especial de navidad PRIMERO
+        const christmasBtn = document.createElement('button');
+        christmasBtn.className = 'genre-btn christmas-genre';
+        christmasBtn.textContent = 'Películas Navideñas';
+        christmasBtn.dataset.genreId = 'christmas';
+        christmasBtn.setAttribute('aria-label', 'Filtrar películas navideñas');
+        genreNav.appendChild(christmasBtn);
+
+        // Agregar el resto de géneros
         data.genres.forEach(genre => {
             const btn = document.createElement('button');
             btn.className = 'genre-btn';
@@ -120,7 +150,7 @@ async function initGenres() {
         });
         
         mainLogger.timeEnd('Carga de géneros');
-        mainLogger.success(`✓ ${data.genres.length} géneros cargados e inicializados`);
+        mainLogger.success(`✓ ${data.genres.length + 1} géneros cargados (incluido Navidad)`);
     } catch (error) {
         mainLogger.error('Error al inicializar géneros:', error);
     }
@@ -134,6 +164,7 @@ async function loadPopularMovies() {
         currentSection = 'popular';
         currentEndpoint = 'movie/popular';
         sectionTitle.textContent = 'Películas populares';
+        sectionTitle.classList.remove('christmas-title');
         searchInput.value = '';
 
         if (activeGenre) {
@@ -165,11 +196,58 @@ async function loadPopularMovies() {
     }
 }
 
+// CARGAR PELÍCULAS NAVIDEÑAS
+async function loadChristmasMovies() {
+    try {
+        mainLogger.info('🎄 Cargando películas navideñas...');
+        
+        currentSection = 'christmas';
+        // Keywords de navidad: 9951 (christmas), 207376 (holiday)
+        currentEndpoint = 'discover/movie?with_keywords=9951,207376&sort_by=popularity.desc';
+        sectionTitle.textContent = '🎄 Películas Navideñas 🎅';
+        sectionTitle.classList.add('christmas-title');
+        searchInput.value = '';
+
+        if (activeGenre) {
+            activeGenre.classList.remove('active');
+        }
+        
+        // Activar el botón de navidad
+        const christmasGenreBtn = document.querySelector('.genre-btn.christmas-genre');
+        if (christmasGenreBtn) {
+            activeGenre = christmasGenreBtn;
+            christmasGenreBtn.classList.add('active');
+        }
+
+        showLoader();
+        const data = await getMovies(currentEndpoint, 1);
+        hideLoader();
+        
+        if (data && data.results && data.results.length > 0) {
+            clearResults();
+            displayMovies(data.results);
+            currentPage = 1;
+            totalPages = data.total_pages;
+            loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
+            
+            mainLogger.success(`✓ ${data.results.length} películas navideñas cargadas`);
+        } else {
+            showEmptyMessage('No se encontraron películas navideñas');
+            mainLogger.warn('✗ Sin resultados de películas navideñas');
+        }
+    } catch (error) {
+        hideLoader();
+        mainLogger.error('Error al cargar películas navideñas:', error);
+        showEmptyMessage('Error al cargar las películas navideñas. Intenta de nuevo.');
+    }
+}
+
 // MOSTRAR FAVORITOS
 function displayFavorites() {
     mainLogger.info('❤️ Mostrando favoritos...');
     currentSection = 'favorites';
     sectionTitle.textContent = 'Mis favoritos';
+    sectionTitle.classList.remove('christmas-title');
     const favorites = getFavorites();
     clearResults();
     loadMoreButton.style.display = 'none';
@@ -188,6 +266,7 @@ function displayHistory() {
     mainLogger.info('📺 Mostrando historial...');
     currentSection = 'history';
     sectionTitle.textContent = 'Películas vistas';
+    sectionTitle.classList.remove('christmas-title');
     const watched = getWatchedMovies();
     clearResults();
     loadMoreButton.style.display = 'none';
@@ -208,6 +287,14 @@ homeButton.addEventListener('click', () => {
     loadPopularMovies();
 });
 
+// Botón de películas navideñas (en la sección destacada)
+christmasMoviesButton.addEventListener('click', () => {
+    mainLogger.info('🎄 Botón de películas navideñas presionado');
+    loadChristmasMovies();
+    // Scroll suave hacia el grid de resultados
+    document.getElementById('section-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
 searchButton.addEventListener('click', async () => {
     const query = searchInput.value.trim();
     
@@ -218,44 +305,34 @@ searchButton.addEventListener('click', async () => {
     }
     
     try {
-        mainLogger.info(`🔍 Búsqueda inteligente iniciada: "${query}"`);
+        mainLogger.info(`🔍 Búsqueda iniciada: "${query}"`);
         
         currentSection = 'search';
-        
+        currentEndpoint = `search/movie?query=${encodeURIComponent(query)}`;
+        sectionTitle.textContent = `Resultados: "${query}"`;
+        sectionTitle.classList.remove('christmas-title');
+
         if (activeGenre) {
             activeGenre.classList.remove('active');
             activeGenre = null;
         }
 
         showLoader();
-        
-        // Importar dinámicamente el módulo de búsqueda
-        const { intelligentSearch, processSearchResults } = await import('./search.js');
-        
-        const searchResults = await intelligentSearch(query, 1);
+        const data = await getMovies(currentEndpoint, 1);
         hideLoader();
         
-        if (searchResults) {
-            // Procesar y mostrar resultados
-            await processSearchResults(searchResults, query);
-            
-            // Actualizar paginación
-            currentPage = searchResults.page;
-            totalPages = searchResults.total_pages;
-            
-            // Guardar el endpoint para "cargar más"
-            if (searchResults.searchType === 'movie' || searchResults.searchType === 'mixed') {
-                currentEndpoint = `search/movie?query=${encodeURIComponent(query)}`;
+        if (data) {
+            clearResults();
+            if (data.results && data.results.length > 0) {
+                displayMovies(data.results);
+                currentPage = 1;
+                totalPages = data.total_pages;
                 loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
+                mainLogger.success(`✓ ${data.results.length} resultados encontrados para "${query}"`);
             } else {
-                // Para búsquedas de personas, no mostrar "cargar más"
-                loadMoreButton.style.display = 'none';
+                showEmptyMessage(`No se encontraron resultados para "${query}"`);
+                mainLogger.warn(`Sin resultados para: "${query}"`);
             }
-            
-            mainLogger.success(`✓ Búsqueda completada: ${searchResults.movies?.length || 0} películas, ${searchResults.people?.length || 0} personas`);
-        } else {
-            showEmptyMessage(`No se encontraron resultados para "${query}"`);
-            mainLogger.warn(`Sin resultados para: "${query}"`);
         }
     } catch (error) {
         hideLoader();
@@ -275,6 +352,12 @@ genreNav.addEventListener('click', async e => {
     const btn = e.target.closest('.genre-btn');
     if (!btn) return;
     
+    // Si es el botón de navidad, llamar a la función especial
+    if (btn.classList.contains('christmas-genre')) {
+        loadChristmasMovies();
+        return;
+    }
+    
     try {
         const genreName = btn.textContent;
         const genreId = btn.dataset.genreId;
@@ -288,6 +371,7 @@ genreNav.addEventListener('click', async e => {
         currentSection = 'genre';
         currentEndpoint = `discover/movie?with_genres=${genreId}`;
         sectionTitle.textContent = genreName;
+        sectionTitle.classList.remove('christmas-title');
         searchInput.value = '';
         
         showLoader();
@@ -443,10 +527,13 @@ async function initApp() {
     mainLogger.time('Tiempo total de inicialización');
     
     try {
-        mainLogger.info('Paso 1: Cargando géneros...');
+        mainLogger.info('Paso 1: Creando efecto de nieve...');
+        createSnowflakes();
+        
+        mainLogger.info('Paso 2: Cargando géneros...');
         await initGenres();
         
-        mainLogger.info('Paso 2: Cargando películas populares...');
+        mainLogger.info('Paso 3: Cargando películas populares...');
         await loadPopularMovies();
         
         mainLogger.timeEnd('Tiempo total de inicialización');

@@ -1,0 +1,1359 @@
+:root {
+    /* Colores navideños */
+    --christmas-red: #c41e3a;
+    --christmas-green: #165b33;
+    --christmas-gold: #d4af37;
+    --christmas-silver: #c0c0c0;
+    --christmas-white: #fffafa;
+    
+    /* Colores originales */
+    --primary: #e50914;
+    --primary-hover: #f40612;
+    --secondary: #564d4d;
+    --background: #0a0e0f;
+    --surface: #1f1f1f;
+    --surface-light: #2a2a2a;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+    --text-muted: #808080;
+    --border: #333333;
+    --success: #46d369;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ================================================== */
+/* RESET Y BASE */
+/* ================================================== */
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--background);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* ================================================== */
+/* EFECTO DE NIEVE NAVIDEÑA */
+/* ================================================== */
+
+.snowflakes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9998;
+    overflow: hidden;
+}
+
+.snowflake {
+    position: absolute;
+    top: -10px;
+    color: var(--christmas-white);
+    font-size: 1em;
+    font-family: Arial, sans-serif;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    animation: fall linear infinite;
+    opacity: 0.8;
+}
+
+@keyframes fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+    }
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+    }
+}
+
+/* ================================================== */
+/* DECORACIONES NAVIDEÑAS EN EL HEADER */
+/* ================================================== */
+
+.christmas-decoration {
+    position: relative;
+}
+
+.christmas-decoration::before,
+.christmas-decoration::after {
+    content: '❄';
+    position: absolute;
+    font-size: 2rem;
+    color: var(--christmas-silver);
+    opacity: 0.3;
+    animation: sparkle 3s ease-in-out infinite;
+}
+
+.christmas-decoration::before {
+    left: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.christmas-decoration::after {
+    right: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+    animation-delay: 1.5s;
+}
+
+@keyframes sparkle {
+    0%, 100% {
+        opacity: 0.3;
+        transform: translateY(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: translateY(-50%) scale(1.2);
+    }
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ================================================== */
+/* HEADER CON TEMA NAVIDEÑO */
+/* ================================================== */
+
+header {
+    padding: 2.5rem 0;
+    border-bottom: 2px solid var(--christmas-gold);
+    margin-bottom: 3rem;
+    background: linear-gradient(180deg, rgba(196, 30, 58, 0.05) 0%, transparent 100%);
+    position: relative;
+}
+
+.header-content {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+header h1 {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--christmas-red) 0%, var(--christmas-gold) 50%, var(--christmas-green) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    cursor: pointer;
+    letter-spacing: -1px;
+    margin-bottom: 0.5rem;
+    transition: var(--transition);
+    position: relative;
+    display: inline-block;
+}
+
+header h1:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+}
+
+.tagline {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+/* ================================================== */
+/* SECCIÓN DESTACADA DE NAVIDAD */
+/* ================================================== */
+
+.christmas-featured {
+    background: linear-gradient(135deg, var(--christmas-red) 0%, var(--christmas-green) 100%);
+    border-radius: var(--radius-lg);
+    padding: 3rem;
+    margin: 3rem 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(196, 30, 58, 0.3);
+    border: 2px solid var(--christmas-gold);
+}
+
+.christmas-featured::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: glow 4s ease-in-out infinite;
+}
+
+@keyframes glow {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+.christmas-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.christmas-header h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--christmas-white);
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.christmas-icon {
+    font-size: 2.5rem;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.christmas-subtitle {
+    color: var(--christmas-white);
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.christmas-cta {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    margin-top: 2rem;
+}
+
+.christmas-button {
+    background: var(--christmas-gold);
+    color: var(--christmas-green);
+    border: none;
+    padding: 1rem 3rem;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.christmas-button:hover {
+    background: var(--christmas-white);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.6);
+}
+
+/* ================================================== */
+/* NAVEGACIÓN PRINCIPAL */
+/* ================================================== */
+
+.main-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+}
+
+.nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.nav-btn:hover {
+    background: var(--text-primary);
+    color: var(--background);
+    border-color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.nav-icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* ================================================== */
+/* BÚSQUEDA */
+/* ================================================== */
+
+.search-container {
+    margin: 2rem auto;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    max-width: 700px;
+}
+
+.search-input-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+#searchInput {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 3rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    background: var(--surface);
+    color: var(--text-primary);
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+#searchInput:focus {
+    outline: none;
+    border-color: var(--christmas-gold);
+    background: var(--background);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+#searchInput::placeholder {
+    color: var(--text-muted);
+}
+
+#searchButton {
+    background: var(--christmas-red);
+    color: var(--text-primary);
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+#searchButton:hover {
+    background: var(--christmas-green);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(22, 91, 51, 0.4);
+}
+
+/* ================================================== */
+/* NAVEGACIÓN DE GÉNEROS CON DESTAQUE NAVIDEÑO */
+/* ================================================== */
+
+.genre-nav {
+    margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.genre-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: inherit;
+}
+
+/* BOTÓN ESPECIAL DE NAVIDAD */
+.genre-btn.christmas-genre {
+    background: linear-gradient(135deg, var(--christmas-red), var(--christmas-green));
+    border: 2px solid var(--christmas-gold);
+    color: var(--christmas-white);
+    font-weight: 700;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(196, 30, 58, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.genre-btn.christmas-genre::before {
+    content: '🎄';
+    margin-right: 0.5rem;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.genre-btn.christmas-genre::after {
+    content: '🎅';
+    margin-left: 0.5rem;
+    animation: bounce 2s ease-in-out infinite;
+    animation-delay: 1s;
+}
+
+.genre-btn.christmas-genre:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(196, 30, 58, 0.5);
+}
+
+.genre-btn.christmas-genre.active {
+    background: linear-gradient(135deg, var(--christmas-green), var(--christmas-red));
+    box-shadow: 0 6px 25px rgba(212, 175, 55, 0.6);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.genre-btn:hover {
+    background: var(--surface);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+.genre-btn.active {
+    background: var(--text-primary);
+    color: var(--background);
+    border-color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ================================================== */
+/* SECCIÓN DE RECOMENDACIONES */
+/* ================================================== */
+
+.recommendation-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    margin: 3rem 0;
+    box-shadow: var(--shadow-md);
+}
+
+.recommendation-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.recommendation-header h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.recommendation-header p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.genre-selector {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.genre-selector select {
+    background: var(--background);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1.25rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    min-width: 200px;
+    font-weight: 500;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.genre-selector select:focus {
+    outline: none;
+    border-color: var(--christmas-gold);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+.recommend-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--christmas-red);
+    color: var(--text-primary);
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.recommend-button:hover {
+    background: var(--christmas-green);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(22, 91, 51, 0.4);
+}
+
+.button-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.recommended-movie {
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    margin-top: 2rem;
+    display: none;
+}
+
+.recommended-movie.show {
+    display: block;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.recommended-movie h3 {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1.5rem;
+}
+
+.recommended-details {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.recommended-poster {
+    width: 150px;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    box-shadow: var(--shadow-md);
+}
+
+.recommended-info {
+    flex: 1;
+}
+
+.recommended-info h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.recommended-info p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.recommended-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.separator {
+    opacity: 0.5;
+}
+
+.view-details-btn {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--text-primary);
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.view-details-btn:hover {
+    background: var(--text-primary);
+    color: var(--background);
+}
+
+/* ================================================== */
+/* SECCIÓN DE PELÍCULAS */
+/* ================================================== */
+
+.section-header {
+    margin: 3rem 0 2rem;
+}
+
+#section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+}
+
+/* Título especial para sección navideña */
+#section-title.christmas-title {
+    background: linear-gradient(135deg, var(--christmas-red), var(--christmas-gold), var(--christmas-green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#section-title.christmas-title::before {
+    content: '🎄';
+}
+
+#section-title.christmas-title::after {
+    content: '🎅';
+}
+
+/* ================================================== */
+/* GRID DE PELÍCULAS */
+/* ================================================== */
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+    min-height: 400px;
+    margin-bottom: 3rem;
+}
+
+.movie-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+}
+
+.movie-card:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-lg);
+    z-index: 10;
+}
+
+.movie-card img {
+    width: 100%;
+    display: block;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+}
+
+.movie-status {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    backdrop-filter: blur(8px);
+    z-index: 1;
+    font-weight: 600;
+}
+
+.movie-status:nth-of-type(2) {
+    right: 40px;
+}
+
+.movie-info {
+    padding: 1rem;
+}
+
+.movie-info h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.movie-info p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.empty-message {
+    text-align: center;
+    grid-column: 1 / -1;
+    padding: 4rem 2rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+}
+
+/* ================================================== */
+/* LOADER */
+/* ================================================== */
+
+.loader {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem 0;
+}
+
+.loader-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid var(--border);
+    border-top-color: var(--christmas-red);
+    border-right-color: var(--christmas-gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ================================================== */
+/* PAGINACIÓN */
+/* ================================================== */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 0;
+}
+
+#load-more {
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 0.875rem 2.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+#load-more:hover {
+    background: var(--text-primary);
+    color: var(--background);
+    border-color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+/* ================================================== */
+/* MODAL */
+/* ================================================== */
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 1100px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    border: 1px solid var(--border);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+}
+
+.close-modal {
+    position: sticky;
+    top: 1rem;
+    right: 0;
+    margin: 1rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    float: right;
+    transition: var(--transition);
+    color: var(--text-primary);
+}
+
+.close-modal svg {
+    width: 20px;
+    height: 20px;
+}
+
+.close-modal:hover {
+    background: var(--text-primary);
+    color: var(--background);
+    border-color: var(--text-primary);
+}
+
+#modal-body {
+    padding: 2.5rem;
+    clear: both;
+}
+
+.modal-header {
+    display: flex;
+    gap: 2.5rem;
+    margin-bottom: 2rem;
+    align-items: flex-start;
+}
+
+.modal-poster {
+    width: 280px;
+    border-radius: var(--radius-lg);
+    flex-shrink: 0;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header > div {
+    flex: 1;
+}
+
+.modal-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+}
+
+.modal-header p {
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.modal-header strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.modal-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+    padding: 2rem;
+    background: var(--background);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 0.5rem;
+    word-break: break-word;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.movie-actions {
+    display: flex;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.action-btn {
+    flex: 1;
+    background: var(--background);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.action-btn:hover {
+    background: var(--text-primary);
+    color: var(--background);
+    border-color: var(--text-primary);
+}
+
+.action-btn.active {
+    background: var(--primary);
+    color: var(--text-primary);
+    border-color: var(--primary);
+}
+
+.action-btn:first-child.active {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.action-btn:last-child.active {
+    background: var(--success);
+    border-color: var(--success);
+}
+
+.modal-section {
+    margin-top: 2.5rem;
+}
+
+.modal-section h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    color: var(--text-primary);
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-section p {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+.modal-trailer {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.modal-trailer iframe {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border: none;
+}
+
+.production-companies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.company-logo {
+    height: 50px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.company-logo:hover {
+    transform: scale(1.1);
+}
+
+.keywords-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.keyword-tag {
+    background: var(--background);
+    padding: 0.4rem 0.875rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+.keyword-tag:hover {
+    background: var(--text-primary);
+    color: var(--background);
+    border-color: var(--text-primary);
+}
+
+.review-card {
+    background: var(--background);
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+}
+
+.review-card .author {
+    font-weight: 700;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.review-card p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+.review-card a {
+    color: var(--primary);
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.review-card a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+.similar-movies {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 1.25rem;
+}
+
+.similar-movie {
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.similar-movie:hover {
+    transform: translateY(-5px);
+}
+
+.similar-movie img {
+    width: 100%;
+    border-radius: var(--radius-md);
+    margin-bottom: 0.5rem;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    box-shadow: var(--shadow-sm);
+}
+
+.similar-movie p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* ================================================== */
+/* FOOTER */
+/* ================================================== */
+
+.main-footer {
+    margin-top: 5rem;
+    padding: 3rem 0;
+    border-top: 2px solid var(--christmas-gold);
+    background: linear-gradient(180deg, transparent 0%, rgba(196, 30, 58, 0.05) 100%);
+}
+
+.footer-content {
+    text-align: center;
+}
+
+.footer-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.footer-disclaimer {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 1.5rem;
+}
+
+.tmdb-logo {
+    width: 100px;
+    opacity: 0.4;
+    transition: opacity 0.2s ease;
+}
+
+.tmdb-logo:hover {
+    opacity: 0.7;
+}
+
+/* ================================================== */
+/* RESPONSIVE */
+/* ================================================== */
+
+@media (max-width: 1024px) {
+    .results-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+    
+    .christmas-featured {
+        padding: 2rem;
+    }
+    
+    .christmas-header h2 {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 1rem;
+    }
+
+    header {
+        padding: 2rem 0;
+    }
+    
+    .christmas-decoration::before,
+    .christmas-decoration::after {
+        display: none;
+    }
+
+    .search-container {
+        flex-direction: column;
+    }
+
+    #searchInput,
+    #searchButton {
+        width: 100%;
+    }
+
+    .results-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+
+    .modal-header {
+        flex-direction: column;
+    }
+
+    .modal-poster {
+        width: 200px;
+        margin: 0 auto;
+    }
+
+    .modal-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .similar-movies {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    }
+
+    .recommended-details {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .recommended-poster {
+        margin: 0 auto;
+    }
+
+    .movie-actions {
+        flex-direction: column;
+    }
+
+    #modal-body {
+        padding: 1.5rem;
+    }
+
+    .main-navigation {
+        flex-direction: column;
+    }
+
+    .nav-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .christmas-featured {
+        padding: 1.5rem;
+    }
+    
+    .christmas-header h2 {
+        font-size: 1.5rem;
+        flex-direction: column;
+    }
+    
+    .christmas-button {
+        padding: 0.875rem 2rem;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .results-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    .modal-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .genre-selector {
+        flex-direction: column;
+    }
+
+    .genre-selector select,
+    .recommend-button {
+        width: 100%;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+    
+    .christmas-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .christmas-icon {
+        font-size: 1.5rem;
+    }
+}
