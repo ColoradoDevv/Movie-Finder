@@ -202,8 +202,9 @@ async function loadChristmasMovies() {
         mainLogger.info('🎄 Cargando películas navideñas...');
         
         currentSection = 'christmas';
-        // Keywords de navidad: 9951 (christmas), 207376 (holiday)
-        currentEndpoint = 'discover/movie?with_keywords=9951,207376&sort_by=popularity.desc';
+        // Mezcla de keywords y géneros navideños para mejores resultados
+        // Keyword 9951 (christmas) + Género Familia (10751) ordenado por popularidad
+        currentEndpoint = 'discover/movie?with_keywords=9951&sort_by=popularity.desc&vote_count.gte=50';
         sectionTitle.textContent = '🎄 Películas Navideñas 🎅';
         sectionTitle.classList.add('christmas-title');
         searchInput.value = '';
@@ -232,8 +233,23 @@ async function loadChristmasMovies() {
             
             mainLogger.success(`✓ ${data.results.length} películas navideñas cargadas`);
         } else {
-            showEmptyMessage('No se encontraron películas navideñas');
-            mainLogger.warn('✗ Sin resultados de películas navideñas');
+            // Intento alternativo: buscar por texto "christmas" en el título
+            mainLogger.warn('⚠️ Intentando búsqueda alternativa de películas navideñas...');
+            const alternativeEndpoint = 'search/movie?query=christmas&sort_by=popularity.desc';
+            const alternativeData = await getMovies(alternativeEndpoint, 1);
+            
+            if (alternativeData && alternativeData.results && alternativeData.results.length > 0) {
+                clearResults();
+                displayMovies(alternativeData.results);
+                currentPage = 1;
+                totalPages = alternativeData.total_pages;
+                currentEndpoint = alternativeEndpoint;
+                loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
+                mainLogger.success(`✓ ${alternativeData.results.length} películas navideñas encontradas (búsqueda alternativa)`);
+            } else {
+                showEmptyMessage('No se encontraron películas navideñas. Intenta más tarde.');
+                mainLogger.error('✗ Sin resultados de películas navideñas incluso en búsqueda alternativa');
+            }
         }
     } catch (error) {
         hideLoader();
