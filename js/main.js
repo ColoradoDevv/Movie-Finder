@@ -12,6 +12,12 @@ let totalPages = 1;
 let currentEndpoint = 'movie/popular';
 let activeGenre = null;
 let currentSection = 'popular';
+let allMoviesCache = []; // Cache para almacenar todas las películas cargadas
+let currentFilters = {
+    sortBy: 'default',
+    year: '',
+    rating: ''
+};
 
 // Referencias a elementos del DOM
 const searchInput = document.getElementById('searchInput');
@@ -25,6 +31,16 @@ const viewRecommendedDetails = document.getElementById('view-recommended-details
 const recommendButton = document.getElementById('recommend-button');
 const recommendationGenreSelect = document.getElementById('recommendation-genre');
 const christmasMoviesButton = document.getElementById('christmas-movies-button');
+
+// Referencias a elementos de filtros
+const toggleFiltersBtn = document.getElementById('toggle-filters');
+const filtersSection = document.querySelector('.filters-section');
+const sortBySelect = document.getElementById('sort-by');
+const filterYearSelect = document.getElementById('filter-year');
+const filterRatingSelect = document.getElementById('filter-rating');
+const applyFiltersBtn = document.getElementById('apply-filters');
+const resetFiltersBtn = document.getElementById('reset-filters');
+const resultsCount = document.getElementById('results-count');
 
 mainLogger.info('🚀 MovieFinder iniciando...');
 mainLogger.group('Estado inicial de la aplicación');
@@ -53,8 +69,149 @@ function createSnowflakes() {
     mainLogger.info('❄️ Efecto de nieve navideña creado');
 }
 
-// FUNCIÓN OPTIMIZADA PARA REFRESCAR LA LISTA
-function updateGrid() {
+// FUNCIÓN PARA APLICAR FILTROS Y ORDENAMIENTO
+function applyFiltersToMovies(movies) {
+    if (!Array.isArray(movies) || movies.length === 0) {
+        return movies;
+    }
+
+    let filteredMovies = [...movies];
+
+    // Filtrar por año
+    if (currentFilters.year) {
+        filteredMovies = filteredMovies.filter(movie => {
+            if (!movie.release_date) return false;
+            const year = new Date(movie.release_date).getFullYear();
+            
+            switch (currentFilters.year) {
+                case '2024':
+                case '2023':
+                case '2022':
+                case '2021':
+                case '2020':
+                    return year === parseInt(currentFilters.year);
+                case '2010s':
+                    return year >= 2010 && year <= 2019;
+                case '2000s':
+                    return year >= 2000 && year <= 2009;
+                case '1990s':
+                    return year >= 1990 && year <= 1999;
+                case '1980s':
+                    return year >= 1980 && year <= 1989;
+                case 'classic':
+                    return year < 1980;
+                default:
+                    return true;
+            }
+        });
+    }
+
+    // Filtrar por calificación
+    if (currentFilters.rating) {
+        const minRating = parseFloat(currentFilters.rating);
+        filteredMovies = filteredMovies.filter(movie => {
+            return (movie.vote_average || 0) >= minRating;
+        });
+    }
+
+    // Ordenar
+    switch (currentFilters.sortBy) {
+        case 'title-asc':
+            filteredMovies.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+            break;
+        case 'title-desc':
+            filteredMovies.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+            break;
+        case 'rating-desc':
+            filteredMovies.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+            break;
+        case 'rating-asc':
+            filteredMovies.sort((a, b) => (a.vote_average || 0) - (b.vote_average || 0));
+            break;
+        case 'date-desc':
+            filteredMovies.sort((a, b) => {
+                const dateA = new Date(a.release_date || '1900-01-01');
+                const dateB = new Date(b.release_date || '1900-01-01');
+                return dateB - dateA;
+            });
+            break;
+        case 'date-asc':
+            filteredMovies.sort((a, b) => {
+                const dateA = new Date(a.release_date || '1900-01-01');
+                const dateB = new Date(b.release_date || '1900-01-01');
+                return dateA - dateB;
+            });
+            break;
+        case 'popularity-desc':
+            filteredMovies.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+            break;
+        default:
+            // Mantener orden original
+            break;
+    }
+
+    return filteredMovies;
+}
+
+// FUNCIÓN PARA ACTUALIZAR CONTADOR DE RESULTADOS
+function updateResultsCount(count, total) {
+    if (resultsCount) {
+        if (count === total) {
+            resultsCount.textContent = `Mostrando ${count} ${count === 1 ? 'película' : 'películas'}`;
+        } else {
+            resultsCount.textContent = `Mostrando ${count} de ${total} ${total === 1 ? 'película' : 'películas'}`;
+        }
+    }
+}
+
+// EVENT LISTENERS PARA FILTROS
+
+toggleFiltersBtn.addEventListener('click', () => {
+    filtersSection.classList.toggle('collapsed');
+    mainLogger.info(`Panel de filtros ${filtersSection.classList.contains('collapsed') ? 'cerrado' : 'abierto'}`);
+});
+
+applyFiltersBtn.addEventListener('click', () => {
+    mainLogger.info('🔍 Aplicando filtros...');
+    
+    currentFilters.sortBy = sortBySelect.value;
+    currentFilters.year = filterYearSelect.value;
+    currentFilters.rating = filterRatingSelect.value;
+    
+    mainLogger.debug('Filtros aplicados:', currentFilters);
+
+    // Aplicar filtros a las películas en caché
+    if (allMoviesCache.length > 0) {
+        const filteredMovies = applyFiltersToMovies(allMoviesCache);
+        clearResults();
+        displayMovies(filteredMovies);
+        updateResultsCount(filteredMovies.length, allMoviesCache.length);
+        mainLogger.success(`✓ Filtros aplicados: ${filteredMovies.length} resultados`);
+    }
+});
+
+resetFiltersBtn.addEventListener('click', () => {
+    mainLogger.info('🔄 Reseteando filtros...');
+    
+    sortBySelect.value = 'default';
+    filterYearSelect.value = '';
+    filterRatingSelect.value = '';
+    
+    currentFilters = {
+        sortBy: 'default',
+        year: '',
+        rating: ''
+    };
+
+    // Restaurar películas originales
+    if (allMoviesCache.length > 0) {
+        clearResults();
+        displayMovies(allMoviesCache);
+        updateResultsCount(allMoviesCache.length, allMoviesCache.length);
+    }
+    
+    mainLogger.success('✓ Filtros reseteados');
+});
     mainLogger.debug('🔄 Actualizando grid de películas...');
     
     if (currentSection === 'favorites') {
@@ -109,7 +266,6 @@ function updateGrid() {
         mainLogger.timeEnd('Actualización de estados en grid');
         mainLogger.success('✓ Grid actualizado exitosamente');
     }
-}
 
 // CARGAR GÉNEROS CON DESTAQUE NAVIDEÑO
 async function initGenres() {
@@ -166,6 +322,7 @@ async function loadPopularMovies() {
         sectionTitle.textContent = 'Películas populares';
         sectionTitle.classList.remove('christmas-title');
         searchInput.value = '';
+        allMoviesCache = []; // Limpiar caché
 
         if (activeGenre) {
             activeGenre.classList.remove('active');
@@ -179,7 +336,10 @@ async function loadPopularMovies() {
         
         if (data && data.results) {
             clearResults();
-            displayMovies(data.results);
+            allMoviesCache = [...data.results]; // Guardar en caché
+            const filteredMovies = applyFiltersToMovies(allMoviesCache);
+            displayMovies(filteredMovies);
+            updateResultsCount(filteredMovies.length, allMoviesCache.length);
             currentPage = 1;
             totalPages = data.total_pages;
             loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
@@ -187,6 +347,7 @@ async function loadPopularMovies() {
             mainLogger.success(`✓ Películas populares cargadas (Página 1/${totalPages})`);
         } else {
             showEmptyMessage('No se pudieron cargar las películas populares');
+            updateResultsCount(0, 0);
             mainLogger.error('✗ Error al cargar películas populares');
         }
     } catch (error) {
@@ -202,9 +363,8 @@ async function loadChristmasMovies() {
         mainLogger.info('🎄 Cargando películas navideñas...');
         
         currentSection = 'christmas';
-        // Mezcla de keywords y géneros navideños para mejores resultados
-        // Keyword 9951 (christmas) + Género Familia (10751) ordenado por popularidad
-        currentEndpoint = 'discover/movie?with_keywords=9951&sort_by=popularity.desc&vote_count.gte=50';
+        // Búsqueda directa por término "christmas" que es más efectiva
+        currentEndpoint = 'search/movie?query=christmas';
         sectionTitle.textContent = '🎄 Películas Navideñas 🎅';
         sectionTitle.classList.add('christmas-title');
         searchInput.value = '';
@@ -225,30 +385,67 @@ async function loadChristmasMovies() {
         hideLoader();
         
         if (data && data.results && data.results.length > 0) {
+            // Filtrar películas que realmente tengan "christmas", "navidad", "santa" en el título
+            const christmasMovies = data.results.filter(movie => {
+                const title = (movie.title || '').toLowerCase();
+                const originalTitle = (movie.original_title || '').toLowerCase();
+                return title.includes('christmas') || 
+                       title.includes('navidad') || 
+                       title.includes('santa') ||
+                       title.includes('noel') ||
+                       title.includes('holiday') ||
+                       originalTitle.includes('christmas') ||
+                       originalTitle.includes('santa');
+            });
+            
             clearResults();
-            displayMovies(data.results);
-            currentPage = 1;
-            totalPages = data.total_pages;
-            loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
             
-            mainLogger.success(`✓ ${data.results.length} películas navideñas cargadas`);
-        } else {
-            // Intento alternativo: buscar por texto "christmas" en el título
-            mainLogger.warn('⚠️ Intentando búsqueda alternativa de películas navideñas...');
-            const alternativeEndpoint = 'search/movie?query=christmas&sort_by=popularity.desc';
-            const alternativeData = await getMovies(alternativeEndpoint, 1);
-            
-            if (alternativeData && alternativeData.results && alternativeData.results.length > 0) {
-                clearResults();
-                displayMovies(alternativeData.results);
+            if (christmasMovies.length > 0) {
+                displayMovies(christmasMovies);
                 currentPage = 1;
-                totalPages = alternativeData.total_pages;
-                currentEndpoint = alternativeEndpoint;
+                totalPages = data.total_pages;
                 loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-                mainLogger.success(`✓ ${alternativeData.results.length} películas navideñas encontradas (búsqueda alternativa)`);
+                mainLogger.success(`✓ ${christmasMovies.length} películas navideñas reales cargadas`);
+            } else {
+                // Si el filtro es muy estricto, mostrar todas
+                displayMovies(data.results);
+                currentPage = 1;
+                totalPages = data.total_pages;
+                loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
+                mainLogger.success(`✓ ${data.results.length} películas relacionadas con navidad cargadas`);
+            }
+        } else {
+            // Búsqueda alternativa con múltiples términos navideños
+            mainLogger.warn('⚠️ Intentando búsquedas alternativas de películas navideñas...');
+            
+            const searchTerms = ['santa claus', 'navidad', 'noel', 'christmas carol', 'holiday'];
+            let allChristmasMovies = [];
+            const seenIds = new Set();
+            
+            for (const term of searchTerms) {
+                const altData = await getMovies(`search/movie?query=${encodeURIComponent(term)}`, 1);
+                if (altData && altData.results) {
+                    altData.results.forEach(movie => {
+                        if (!seenIds.has(movie.id)) {
+                            seenIds.add(movie.id);
+                            allChristmasMovies.push(movie);
+                        }
+                    });
+                }
+            }
+            
+            if (allChristmasMovies.length > 0) {
+                // Ordenar por popularidad
+                allChristmasMovies.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+                clearResults();
+                displayMovies(allChristmasMovies.slice(0, 20));
+                currentPage = 1;
+                totalPages = 1;
+                loadMoreButton.style.display = 'none';
+                mainLogger.success(`✓ ${allChristmasMovies.length} películas navideñas encontradas (búsqueda combinada)`);
             } else {
                 showEmptyMessage('No se encontraron películas navideñas. Intenta más tarde.');
-                mainLogger.error('✗ Sin resultados de películas navideñas incluso en búsqueda alternativa');
+                mainLogger.error('✗ Sin resultados de películas navideñas');
             }
         }
     } catch (error) {
@@ -422,7 +619,14 @@ loadMoreButton.addEventListener('click', async () => {
         hideLoader();
         
         if (data && data.results) {
-            displayMovies(data.results);
+            // Agregar nuevas películas al caché
+            allMoviesCache = [...allMoviesCache, ...data.results];
+            
+            // Aplicar filtros a las nuevas películas
+            const filteredMovies = applyFiltersToMovies(data.results);
+            displayMovies(filteredMovies);
+            updateResultsCount(applyFiltersToMovies(allMoviesCache).length, allMoviesCache.length);
+            
             currentPage = data.page;
             if (currentPage >= data.total_pages) {
                 loadMoreButton.style.display = 'none';
@@ -573,4 +777,4 @@ async function initApp() {
 }
 
 mainLogger.info('⏳ Iniciando aplicación...');
-initApp();
+initApp();  
