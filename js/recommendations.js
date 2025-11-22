@@ -5,13 +5,42 @@ import { recommendationsLogger } from './logger.js';
 
 export let currentRecommendedMovie = null;
 
-// Historial de películas recomendadas (máximo 50)
-let recommendedHistory = [];
+// Historial de películas recomendadas (máximo 50) - AHORA PERSISTENTE
 const MAX_HISTORY = 50;
+const STORAGE_KEY = 'moviefinder_recommendation_history';
 
 recommendationsLogger.info('🎲 Módulo de recomendaciones inicializado');
 recommendationsLogger.debug(`Historial máximo: ${MAX_HISTORY} películas`);
 
+/**
+ * Obtiene el historial de recomendaciones desde localStorage
+ */
+function getRecommendationHistory() {
+    try {
+        const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        recommendationsLogger.debug(`📖 Historial cargado: ${history.length} películas`);
+        return history;
+    } catch (error) {
+        recommendationsLogger.error('Error al cargar historial:', error);
+        return [];
+    }
+}
+
+/**
+ * Guarda el historial de recomendaciones en localStorage
+ */
+function saveRecommendationHistory(history) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        recommendationsLogger.debug(`💾 Historial guardado: ${history.length} películas`);
+    } catch (error) {
+        recommendationsLogger.error('Error al guardar historial:', error);
+    }
+}
+
+/**
+ * Obtiene una película aleatoria basada en criterios de calidad
+ */
 export async function getRandomMovie() {
     const genreId = document.getElementById('recommendation-genre').value;
     const genreName = genreId 
@@ -39,6 +68,9 @@ export async function getRandomMovie() {
     }
 
     recommendationsLogger.info(`📊 ${data.results.length} candidatos disponibles`);
+    
+    // Obtener historial persistente
+    let recommendedHistory = getRecommendationHistory();
     recommendationsLogger.debug(`Historial actual: ${recommendedHistory.length} películas`);
 
     // Filtrar películas que ya fueron recomendadas recientemente
@@ -51,6 +83,7 @@ export async function getRandomMovie() {
     if (availableMovies.length === 0) {
         recommendationsLogger.warn('⚠️ Todas las películas ya fueron mostradas, limpiando historial');
         recommendedHistory = [];
+        saveRecommendationHistory([]);
     } else {
         recommendationsLogger.debug(`${availableMovies.length} películas no vistas disponibles`);
     }
@@ -76,14 +109,22 @@ export async function getRandomMovie() {
         recommendationsLogger.debug(`Película ID ${removed} removida del historial (límite alcanzado)`);
     }
 
-    recommendationsLogger.info(`📝 Historial actualizado: ${recommendedHistory.length}/${MAX_HISTORY}`);
+    // Guardar historial persistente
+    saveRecommendationHistory(recommendedHistory);
+    recommendationsLogger.info(`📝 Historial actualizado y guardado: ${recommendedHistory.length}/${MAX_HISTORY}`);
 
     displayRecommendedMovie(currentRecommendedMovie);
 }
 
-// Función para resetear el historial
+/**
+ * Resetea el historial de recomendaciones
+ */
 export function resetRecommendationHistory() {
-    const previousCount = recommendedHistory.length;
-    recommendedHistory = [];
+    const previousCount = getRecommendationHistory().length;
+    saveRecommendationHistory([]);
     recommendationsLogger.info(`🔄 Historial reseteado (${previousCount} películas eliminadas)`);
 }
+
+// Inicialización: Log del estado inicial
+const initialHistory = getRecommendationHistory();
+recommendationsLogger.info(`📊 Estado inicial: ${initialHistory.length} películas en historial`);

@@ -1,13 +1,12 @@
 import { loadGenres, getMovies, getMovieDetails } from './api.js';
 import { displayMovies, displayRecommendedMovie } from './ui.js';
-import { openModal } from './modal.js';
+import { openModal, closeModal } from './modal.js';
 import { getRandomMovie, currentRecommendedMovie, resetRecommendationHistory } from './recommendations.js';
 import { getFavorites, getWatchedMovies, isFavorite, isWatched } from './storage.js';
 import { showLoader, hideLoader, clearResults, showEmptyMessage, sectionTitle, resultsGrid, modal } from './utils.js';
 import { mainLogger } from './logger.js';
-import { syncNavigationState, updateNavigationBadges, isMobileDevice, initializeMobileNavigation } from './mobile-nav.js';
-
-mainLogger.info('🚀 MovieFinder iniciando...');
+import { syncNavigationState, updateNavigationBadges, isMobileDevice } from './mobile-nav.js';
+import { intelligentSearch, processSearchResults } from './search.js';
 
 // Estado de la aplicación
 let currentPage = 1;
@@ -16,6 +15,7 @@ let currentEndpoint = 'movie/popular';
 let activeGenre = null;
 let currentSection = 'popular';
 let allMoviesCache = [];
+let currentSearchQuery = '';
 let currentFilters = {
     sortBy: 'default',
     year: '',
@@ -55,61 +55,6 @@ mainLogger.info(`Página actual: ${currentPage}/${totalPages}`);
 mainLogger.groupEnd();
 
 // ============================================
-// INICIALIZACIÓN
-// ============================================
-
-async function initApp() {
-    mainLogger.group('🚀 Inicialización de MovieFinder');
-    mainLogger.time('Tiempo total de inicialización');
-    
-    try {
-        // CRÍTICO: Inicializar navegación móvil PRIMERO
-        mainLogger.info('Paso 0: Inicializando navegación móvil...');
-        initializeMobileNavigation();
-        
-        mainLogger.info('Paso 1: Cargando géneros...');
-        await initGenres();
-        
-        mainLogger.info('Paso 2: Cargando películas populares...');
-        await loadPopularMovies();
-        
-        mainLogger.info('Paso 3: Sincronizando estado de navegación...');
-        syncNavigationState('popular');
-        
-        mainLogger.info('Paso 4: Actualizando badges...');
-        updateNavigationBadges(getFavorites().length, getWatchedMovies().length);
-        
-        mainLogger.timeEnd('Tiempo total de inicialización');
-        mainLogger.success('✅ MovieFinder inicializado correctamente');
-        mainLogger.groupEnd();
-        
-        // Resumen final
-        mainLogger.group('📊 Estado final de la aplicación');
-        mainLogger.info(`Sección: ${currentSection}`);
-        mainLogger.info(`Total páginas: ${totalPages}`);
-        mainLogger.info(`Favoritos: ${getFavorites().length}`);
-        mainLogger.info(`Vistas: ${getWatchedMovies().length}`);
-        mainLogger.info(`Dispositivo: ${isMobileDevice() ? 'Móvil' : 'Desktop'}`);
-        mainLogger.groupEnd();
-        
-    } catch (error) {
-        mainLogger.timeEnd('Tiempo total de inicialización');
-        mainLogger.error('❌ Error crítico al inicializar la aplicación:', error);
-        mainLogger.groupEnd();
-        showEmptyMessage('Error al cargar la aplicación. Recarga la página.');
-    }
-}
-
-// Esperar a que el DOM esté completamente cargado
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        mainLogger.info('⏳ DOM listo, iniciando aplicación...');
-        initApp();
-    });
-} else {
-    mainLogger.info('⏳ DOM ya listo, iniciando aplicación...');
-    initApp();
-}
 // FUNCIONES DE NAVEGACIÓN
 // ============================================
 
@@ -149,6 +94,7 @@ async function loadTopRatedMovies() {
         sectionTitle.textContent = 'Películas mejor valoradas';
         sectionTitle.classList.remove('christmas-title');
         searchInput.value = '';
+        currentSearchQuery = '';
         allMoviesCache = [];
 
         if (activeGenre) {
@@ -178,7 +124,7 @@ async function loadTopRatedMovies() {
     } catch (error) {
         hideLoader();
         mainLogger.error('Error al cargar películas mejor valoradas:', error);
-        showEmptyMessage('Error al cargar las películas. Intenta de nuevo.');
+        showNetworkError();
     }
 }
 
@@ -194,6 +140,7 @@ async function loadUpcomingMovies() {
         sectionTitle.textContent = 'Próximos estrenos';
         sectionTitle.classList.remove('christmas-title');
         searchInput.value = '';
+        currentSearchQuery = '';
         allMoviesCache = [];
 
         if (activeGenre) {
@@ -223,7 +170,7 @@ async function loadUpcomingMovies() {
     } catch (error) {
         hideLoader();
         mainLogger.error('Error al cargar próximos estrenos:', error);
-        showEmptyMessage('Error al cargar las películas. Intenta de nuevo.');
+        showNetworkError();
     }
 }
 
@@ -359,7 +306,7 @@ if (resetFiltersBtn) {
 }
 
 // ============================================
-// FUNCIONES PRINCIPALES (del código original)
+// FUNCIONES PRINCIPALES
 // ============================================
 
 function updateGrid() {
@@ -367,56 +314,58 @@ function updateGrid() {
     
     if (currentSection === 'favorites') {
         displayFavorites();
+        return;
     } else if (currentSection === 'history') {
         displayHistory();
-    } else {
-        mainLogger.time('Actualización de estados en grid');
-        
-        const cards = resultsGrid.querySelectorAll('.movie-card');
-        mainLogger.debug(`Actualizando ${cards.length} tarjetas`);
-        
-        cards.forEach(card => {
-            const movieId = parseInt(card.dataset.movieId);
-            const cardIsFavorite = isFavorite(movieId);
-            const cardIsWatched = isWatched(movieId);
-            
-            const favoriteIcon = `<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-            </svg>`;
-            
-            const watchedIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>`;
-            
-            const existingBadges = card.querySelectorAll('.movie-status');
-            existingBadges.forEach(badge => badge.remove());
-            
-            const fragment = document.createDocumentFragment();
-            
-            if (cardIsFavorite) {
-                const favBadge = document.createElement('span');
-                favBadge.className = 'movie-status';
-                favBadge.style.color = '#e50914';
-                favBadge.innerHTML = favoriteIcon;
-                fragment.appendChild(favBadge);
-            }
-            
-            if (cardIsWatched) {
-                const watchBadge = document.createElement('span');
-                watchBadge.className = 'movie-status';
-                watchBadge.style.color = '#46d369';
-                watchBadge.innerHTML = watchedIcon;
-                fragment.appendChild(watchBadge);
-            }
-            
-            if (fragment.childNodes.length > 0) {
-                card.insertBefore(fragment, card.firstChild);
-            }
-        });
-        
-        mainLogger.timeEnd('Actualización de estados en grid');
-        mainLogger.success('✓ Grid actualizado exitosamente');
+        return;
     }
+    
+    mainLogger.time('Actualización de estados en grid');
+    
+    const cards = resultsGrid.querySelectorAll('.movie-card');
+    mainLogger.debug(`Actualizando ${cards.length} tarjetas`);
+    
+    cards.forEach(card => {
+        const movieId = parseInt(card.dataset.movieId);
+        const cardIsFavorite = isFavorite(movieId);
+        const cardIsWatched = isWatched(movieId);
+        
+        const favoriteIcon = `<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>`;
+        
+        const watchedIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>`;
+        
+        const existingBadges = card.querySelectorAll('.movie-status');
+        existingBadges.forEach(badge => badge.remove());
+        
+        const fragment = document.createDocumentFragment();
+        
+        if (cardIsFavorite) {
+            const favBadge = document.createElement('span');
+            favBadge.className = 'movie-status';
+            favBadge.style.color = '#e50914';
+            favBadge.innerHTML = favoriteIcon;
+            fragment.appendChild(favBadge);
+        }
+        
+        if (cardIsWatched) {
+            const watchBadge = document.createElement('span');
+            watchBadge.className = 'movie-status';
+            watchBadge.style.color = '#46d369';
+            watchBadge.innerHTML = watchedIcon;
+            fragment.appendChild(watchBadge);
+        }
+        
+        if (fragment.childNodes.length > 0) {
+            card.insertBefore(fragment, card.firstChild);
+        }
+    });
+    
+    mainLogger.timeEnd('Actualización de estados en grid');
+    mainLogger.success('✓ Grid actualizado exitosamente');
     
     // Actualizar badges de navegación
     updateNavigationBadges(getFavorites().length, getWatchedMovies().length);
@@ -475,6 +424,7 @@ async function loadPopularMovies() {
         sectionTitle.textContent = 'Películas populares';
         sectionTitle.classList.remove('christmas-title');
         searchInput.value = '';
+        currentSearchQuery = '';
         allMoviesCache = [];
 
         if (activeGenre) {
@@ -504,7 +454,7 @@ async function loadPopularMovies() {
     } catch (error) {
         hideLoader();
         mainLogger.error('Error al cargar películas populares:', error);
-        showEmptyMessage('Error al cargar las películas. Intenta de nuevo.');
+        showNetworkError();
     }
 }
 
@@ -517,6 +467,8 @@ async function loadChristmasMovies() {
         sectionTitle.textContent = '🎄 Películas Navideñas';
         sectionTitle.classList.add('christmas-title');
         searchInput.value = '';
+        currentSearchQuery = '';
+        allMoviesCache = [];
 
         if (activeGenre) {
             activeGenre.classList.remove('active');
@@ -548,12 +500,14 @@ async function loadChristmasMovies() {
             clearResults();
             
             if (christmasMovies.length > 0) {
+                allMoviesCache = [...christmasMovies];
                 displayMovies(christmasMovies);
                 currentPage = 1;
                 totalPages = data.total_pages;
                 loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
                 mainLogger.success(`✓ ${christmasMovies.length} películas navideñas cargadas`);
             } else {
+                allMoviesCache = [...data.results];
                 displayMovies(data.results);
                 currentPage = 1;
                 totalPages = data.total_pages;
@@ -566,7 +520,7 @@ async function loadChristmasMovies() {
     } catch (error) {
         hideLoader();
         mainLogger.error('Error al cargar películas navideñas:', error);
-        showEmptyMessage('Error al cargar las películas navideñas. Intenta de nuevo.');
+        showNetworkError();
     }
 }
 
@@ -578,6 +532,7 @@ function displayFavorites() {
     const favorites = getFavorites();
     clearResults();
     loadMoreButton.style.display = 'none';
+    allMoviesCache = [];
     
     if (favorites.length === 0) {
         showEmptyMessage('Aún no tienes películas en favoritos');
@@ -597,6 +552,7 @@ function displayHistory() {
     const watched = getWatchedMovies();
     clearResults();
     loadMoreButton.style.display = 'none';
+    allMoviesCache = [];
     
     if (watched.length === 0) {
         showEmptyMessage('Aún no has marcado ninguna película como vista');
@@ -606,6 +562,10 @@ function displayHistory() {
     }
     
     syncNavigationState('history');
+}
+
+function showNetworkError() {
+    showEmptyMessage('⚠️ Error de conexión. Por favor verifica tu conexión a Internet e intenta de nuevo.');
 }
 
 // ============================================
@@ -641,23 +601,27 @@ if (homeButton) {
     });
 }
 
-// Búsqueda
+// Búsqueda INTELIGENTE - NUEVA IMPLEMENTACIÓN
 if (searchInput) {
     const performSearch = async () => {
         const query = searchInput.value.trim();
         
         if (!query) {
             mainLogger.warn('⚠️ Búsqueda vacía ignorada');
-            alert('Por favor, ingresa un término de búsqueda');
+            return;
+        }
+        
+        if (query.length < 2) {
+            mainLogger.warn('⚠️ Búsqueda muy corta (mínimo 2 caracteres)');
             return;
         }
         
         try {
-            mainLogger.info(`🔍 Búsqueda iniciada: "${query}"`);
+            mainLogger.info(`🔍 Búsqueda inteligente iniciada: "${query}"`);
             
             currentSection = 'search';
-            currentEndpoint = `search/movie?query=${encodeURIComponent(query)}`;
-            sectionTitle.textContent = `Resultados: "${query}"`;
+            currentSearchQuery = query;
+            sectionTitle.textContent = `Buscando: "${query}"`;
             sectionTitle.classList.remove('christmas-title');
 
             if (activeGenre) {
@@ -666,30 +630,43 @@ if (searchInput) {
             }
 
             showLoader();
-            const data = await getMovies(currentEndpoint, 1);
+            
+            // Usar búsqueda inteligente
+            const searchResults = await intelligentSearch(query, 1);
+            
             hideLoader();
             
-            if (data) {
-                clearResults();
-                if (data.results && data.results.length > 0) {
-                    displayMovies(data.results);
-                    currentPage = 1;
-                    totalPages = data.total_pages;
-                    loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-                    mainLogger.success(`✓ ${data.results.length} resultados encontrados`);
-                } else {
-                    showEmptyMessage(`No se encontraron resultados para "${query}"`);
-                }
+            if (searchResults) {
+                // Procesar y mostrar resultados
+                await processSearchResults(searchResults, query);
+                
+                // Actualizar cache y paginación
+                allMoviesCache = searchResults.movies || [];
+                currentPage = searchResults.page || 1;
+                totalPages = searchResults.total_pages || 1;
+                loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
+                
+                mainLogger.success(`✓ Búsqueda completada: ${searchResults.movies?.length || 0} películas encontradas`);
+            } else {
+                showEmptyMessage(`No se encontraron resultados para "${query}"`);
             }
         } catch (error) {
             hideLoader();
             mainLogger.error('Error en búsqueda:', error);
-            showEmptyMessage('Error al buscar. Intenta de nuevo.');
+            showNetworkError();
         }
     };
     
+    // Enter para buscar
     searchInput.addEventListener('keyup', e => {
         if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    // Buscar al perder foco (opcional)
+    searchInput.addEventListener('blur', () => {
+        if (searchInput.value.trim() && searchInput.value.trim() !== currentSearchQuery) {
             performSearch();
         }
     });
@@ -721,6 +698,7 @@ if (genreNav) {
             sectionTitle.textContent = genreName;
             sectionTitle.classList.remove('christmas-title');
             searchInput.value = '';
+            currentSearchQuery = '';
             
             showLoader();
             const data = await getMovies(currentEndpoint, 1);
@@ -728,6 +706,7 @@ if (genreNav) {
             
             if (data) {
                 clearResults();
+                allMoviesCache = [...data.results];
                 displayMovies(data.results);
                 currentPage = 1;
                 totalPages = data.total_pages;
@@ -737,11 +716,12 @@ if (genreNav) {
         } catch (error) {
             hideLoader();
             mainLogger.error('Error al filtrar por género:', error);
+            showNetworkError();
         }
     });
 }
 
-// Cargar más
+// Cargar más - CORREGIDO con filtros
 if (loadMoreButton) {
     loadMoreButton.addEventListener('click', async () => {
         if (currentPage >= totalPages) return;
@@ -754,20 +734,31 @@ if (loadMoreButton) {
             hideLoader();
             
             if (data && data.results) {
+                // Agregar a cache
                 allMoviesCache = [...allMoviesCache, ...data.results];
-                const filteredMovies = applyFiltersToMovies(data.results);
-                displayMovies(filteredMovies);
-                updateResultsCount(applyFiltersToMovies(allMoviesCache).length, allMoviesCache.length);
+                
+                // Aplicar filtros a las nuevas películas
+                const filteredNewMovies = applyFiltersToMovies(data.results);
+                
+                // Mostrar solo las nuevas películas filtradas
+                displayMovies(filteredNewMovies);
+                
+                // Actualizar contador con todas las películas filtradas
+                const allFilteredMovies = applyFiltersToMovies(allMoviesCache);
+                updateResultsCount(allFilteredMovies.length, allMoviesCache.length);
                 
                 currentPage = data.page;
                 if (currentPage >= data.total_pages) {
                     loadMoreButton.style.display = 'none';
                     mainLogger.info('✓ Todas las páginas cargadas');
                 }
+                
+                mainLogger.success(`✓ Página ${currentPage} cargada y filtrada`);
             }
         } catch (error) {
             hideLoader();
             mainLogger.error('Error al cargar más películas:', error);
+            showNetworkError();
         }
     });
 }
@@ -867,25 +858,7 @@ if (modal) {
     });
 }
 
-function closeModal() {
-    mainLogger.info('✖️ Cerrando modal');
-    modal.classList.remove('active');
-    document.body.classList.remove('modal-open');
-}
-
-const closeModalBtn = document.querySelector('.close-modal');
-if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', closeModal);
-}
-
-if (modal) {
-    modal.addEventListener('click', e => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-}
-
+// Cerrar modal con tecla Escape
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
         closeModal();
@@ -893,3 +866,46 @@ document.addEventListener('keydown', e => {
 });
 
 // ============================================
+// INICIALIZACIÓN DE LA APLICACIÓN
+// ============================================
+
+/**
+ * Inicializa la aplicación completa
+ */
+async function initApp() {
+    try {
+        mainLogger.info('🎬 Inicializando MovieFinder...');
+        mainLogger.time('Inicialización completa');
+        
+        // Inicializar géneros
+        await initGenres();
+        
+        // Cargar películas populares
+        await loadPopularMovies();
+        
+        // Actualizar badges iniciales
+        updateNavigationBadges(getFavorites().length, getWatchedMovies().length);
+        
+        mainLogger.timeEnd('Inicialización completa');
+        mainLogger.success('✅ MovieFinder inicializado correctamente');
+        
+        // Log de bienvenida
+        mainLogger.group('🎉 Bienvenido a MovieFinder');
+        mainLogger.info('Películas populares cargadas');
+        mainLogger.info(`${getFavorites().length} favoritos guardados`);
+        mainLogger.info(`${getWatchedMovies().length} películas vistas`);
+        mainLogger.groupEnd();
+        
+    } catch (error) {
+        mainLogger.error('❌ Error fatal al inicializar la aplicación:', error);
+        showNetworkError();
+        mainLogger.timeEnd('Inicialización completa');
+    }
+}
+
+// Iniciar la aplicación cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}

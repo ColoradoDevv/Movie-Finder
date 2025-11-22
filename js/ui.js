@@ -1,6 +1,6 @@
 import { imageBaseUrl } from './config.js';
 import { isFavorite, isWatched } from './storage.js';
-import { formatDate, resultsGrid } from './utils.js';
+import { formatDate, resultsGrid, getPlaceholderImage, handleImageError } from './utils.js';
 import { uiLogger } from './logger.js';
 
 uiLogger.info('🎨 Módulo UI inicializado');
@@ -34,19 +34,28 @@ export function createMovieCard(movie) {
         ? movie.vote_average.toFixed(1) 
         : 'N/A';
 
-    // Validación de imagen
+    // Validación de imagen - USAR PLACEHOLDER LOCAL
     const posterUrl = movie.poster_path 
         ? imageBaseUrl + movie.poster_path 
-        : 'https://via.placeholder.com/500x750/1f1f1f/808080?text=Sin+Poster';
+        : getPlaceholderImage(500, 750, 'Sin Poster');
+
+    // Crear imagen con manejo de errores
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = movie.title || 'Película sin título';
+    img.loading = 'lazy';
+    img.onerror = function() { handleImageError(this); };
 
     card.innerHTML = `
         ${favoriteMark}${watchedMark}
-        <img src="${posterUrl}" alt="${movie.title || 'Película sin título'}" loading="lazy">
         <div class="movie-info">
             <h3>${movie.title || 'Sin título'}</h3>
             <p>${voteAverage} · ${formatDate(movie.release_date)}</p>
         </div>
     `;
+    
+    // Insertar imagen al principio
+    card.insertBefore(img, card.firstChild);
     
     uiLogger.debug(`✓ Tarjeta creada: "${movie.title}"`);
     return card;
@@ -93,17 +102,21 @@ export function displayRecommendedMovie(movie) {
 
     uiLogger.info(`🎲 Mostrando recomendación: "${movie.title}"`);
 
+    // Usar placeholder local
     const posterUrl = movie.poster_path 
         ? imageBaseUrl + movie.poster_path 
-        : 'https://via.placeholder.com/300x450/1f1f1f/808080?text=Sin+Poster';
+        : getPlaceholderImage(300, 450, 'Sin Poster');
 
     const voteAverage = (movie.vote_average && movie.vote_average > 0) 
         ? movie.vote_average.toFixed(1) 
         : 'N/A';
 
     try {
-        document.getElementById('recommended-poster').src = posterUrl;
-        document.getElementById('recommended-poster').alt = movie.title || 'Película recomendada';
+        const posterImg = document.getElementById('recommended-poster');
+        posterImg.src = posterUrl;
+        posterImg.alt = movie.title || 'Película recomendada';
+        posterImg.onerror = function() { handleImageError(this); };
+        
         document.getElementById('recommended-title').textContent = movie.title || 'Sin título';
         document.getElementById('recommended-overview').textContent = movie.overview || 'Sin descripción disponible';
         document.getElementById('recommended-rating').textContent = voteAverage;

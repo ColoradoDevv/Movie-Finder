@@ -1,11 +1,14 @@
 import { imageBaseUrl, youtubeBaseUrl } from './config.js';
 import { addToFavorites, removeFromFavorites, addToWatched, removeFromWatched, isFavorite, isWatched } from './storage.js';
 import { formatDate } from './utils.js';
-const modal = document.getElementById('movie-modal');
 import { getMovieDetails } from './api.js';
 import { modalLogger } from './logger.js';
 
-// Referencias a los event listeners
+const modal = document.getElementById('movie-modal');
+
+// Referencias a los elementos de botones actuales
+let currentFavoriteBtn = null;
+let currentWatchedBtn = null;
 let currentFavoriteHandler = null;
 let currentWatchedHandler = null;
 let currentSimilarHandlers = [];
@@ -20,6 +23,9 @@ export function openModal(details) {
 
     modalLogger.info(`🎬 Abriendo modal para: "${details.title}" (ID: ${details.id})`);
     modalLogger.time('Renderizado del modal');
+
+    // Limpiar event listeners anteriores ANTES de crear el nuevo contenido
+    cleanupEventListeners();
 
     const modalBody = document.getElementById('modal-body');
     
@@ -190,13 +196,22 @@ export function openModal(details) {
     modalLogger.timeEnd('Renderizado del modal');
     modalLogger.success(`✓ Modal abierto exitosamente para "${details.title}"`);
 
-    // Remover event listeners anteriores
-    cleanupEventListeners();
+    // Ahora sí, agregar los nuevos event listeners
+    setupModalEventListeners(details);
+}
 
-    // Event listeners para botones
-    const favoriteBtn = modalBody.querySelector('[data-action="favorite"]');
-    const watchedBtn = modalBody.querySelector('[data-action="watched"]');
+/**
+ * Configura los event listeners del modal
+ * @param {Object} details - Detalles de la película
+ */
+function setupModalEventListeners(details) {
+    const modalBody = document.getElementById('modal-body');
+    
+    // Obtener referencias a los botones
+    currentFavoriteBtn = modalBody.querySelector('[data-action="favorite"]');
+    currentWatchedBtn = modalBody.querySelector('[data-action="watched"]');
 
+    // Crear handlers
     currentFavoriteHandler = () => {
         modalLogger.info(`${isFavorite(details.id) ? '🗑️ Removiendo' : '❤️ Añadiendo'} "${details.title}" de favoritos`);
         
@@ -205,7 +220,7 @@ export function openModal(details) {
         } else {
             addToFavorites(details);
         }
-        openModal(details);
+        openModal(details); // Re-abrir para actualizar estado
         modal.dispatchEvent(new CustomEvent('movie-state-changed'));
     };
 
@@ -217,41 +232,108 @@ export function openModal(details) {
         } else {
             addToWatched(details);
         }
-        openModal(details);
+        openModal(details); // Re-abrir para actualizar estado
         modal.dispatchEvent(new CustomEvent('movie-state-changed'));
     };
 
-    favoriteBtn.addEventListener('click', currentFavoriteHandler);
-    watchedBtn.addEventListener('click', currentWatchedHandler);
+    // Agregar event listeners
+    if (currentFavoriteBtn) {
+        currentFavoriteBtn.addEventListener('click', currentFavoriteHandler);
+        modalLogger.debug('✓ Listener de favoritos agregado');
+    }
+    
+    if (currentWatchedBtn) {
+        currentWatchedBtn.addEventListener('click', currentWatchedHandler);
+        modalLogger.debug('✓ Listener de vistas agregado');
+    }
 
     // Películas similares
     const similarElements = modalBody.querySelectorAll('.similar-movie');
     modalLogger.debug(`📎 Adjuntando ${similarElements.length} listeners a películas similares`);
     
     similarElements.forEach(el => {
-        const handler = () => {
+        const handler = async () => {
             const movieId = el.dataset.movieId;
             if (movieId) {
                 modalLogger.info(`🔄 Cargando película similar ID: ${movieId}`);
-                getMovieDetails(movieId).then(data => {
+                try {
+                    const data = await getMovieDetails(movieId);
                     if (data) openModal(data);
-                });
+                } catch (error) {
+                    modalLogger.error('Error al cargar película similar:', error);
+                }
             }
         };
         el.addEventListener('click', handler);
         currentSimilarHandlers.push({ element: el, handler });
     });
+    
+    modalLogger.success('✓ Todos los event listeners del modal configurados');
 }
 
+/**
+ * Limpia todos los event listeners para prevenir memory leaks
+ */
 function cleanupEventListeners() {
+    // Remover listeners de botones de acción
+    if (currentFavoriteBtn && currentFavoriteHandler) {
+        currentFavoriteBtn.removeEventListener('click', currentFavoriteHandler);
+        modalLogger.debug('🧹 Listener de favoritos removido');
+    }
+    
+    if (currentWatchedBtn && currentWatchedHandler) {
+        currentWatchedBtn.removeEventListener('click', currentWatchedHandler);
+        modalLogger.debug('🧹 Listener de vistas removido');
+    }
+    
+    // Remover listeners de películas similares
     if (currentSimilarHandlers.length > 0) {
-        modalLogger.debug(`🧹 Limpiando ${currentSimilarHandlers.length} event listeners`);
+        modalLogger.debug(`🧹 Limpiando ${currentSimilarHandlers.length} event listeners de similares`);
         currentSimilarHandlers.forEach(({ element, handler }) => {
             element.removeEventListener('click', handler);
         });
         currentSimilarHandlers = [];
     }
     
+    // Resetear referencias
+    currentFavoriteBtn = null;
+    currentWatchedBtn = null;
     currentFavoriteHandler = null;
     currentWatchedHandler = null;
+    
+    modalLogger.debug('✓ Limpieza de event listeners completada');
+}
+
+/**
+ * Cierra el modal
+ */
+export function closeModal() {
+    if (!modal) return;
+    
+    modalLogger.info('✖️ Cerrando modal');
+    
+    // Limpiar event listeners antes de cerrar
+    cleanupEventListeners();
+    
+    modal.classList.remove('active');
+    document.body.classList.remove('modal-open');
+    
+    modalLogger.success('✓ Modal cerrado correctamente');
+}
+
+// Event listener del botón de cerrar
+const closeModalBtn = document.querySelector('.close-modal');
+if (closeModalBtn) {
+    closeModalBtn.addEventListener('click', closeModal);
+    modalLogger.debug('✓ Listener del botón cerrar agregado');
+}
+
+// Cerrar al hacer clic en el overlay
+if (modal) {
+    modal.addEventListener('click', e => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    modalLogger.debug('✓ Listener del overlay agregado');
 }

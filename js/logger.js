@@ -24,11 +24,19 @@ const LOG_EMOJIS = {
     ERROR: '❌'
 };
 
+// Detectar si está en modo producción
+const IS_PRODUCTION = window.location.hostname !== 'localhost' && 
+                      window.location.hostname !== '127.0.0.1' &&
+                      !window.location.hostname.includes('192.168');
+
 class Logger {
     constructor(moduleName, enabled = true) {
         this.moduleName = moduleName;
-        this.enabled = enabled;
-        this.currentLevel = LOG_LEVELS.DEBUG; // Cambiar a INFO para producción
+        this.enabled = enabled && !IS_PRODUCTION; // Deshabilitar en producción
+        
+        // En producción, solo mostrar WARN y ERROR
+        // En desarrollo, mostrar desde DEBUG
+        this.currentLevel = IS_PRODUCTION ? LOG_LEVELS.WARN : LOG_LEVELS.DEBUG;
     }
 
     _log(level, message, data = null) {
@@ -79,24 +87,50 @@ class Logger {
     }
 
     group(title) {
+        if (!this.enabled) return;
         console.group(`📦 ${title}`);
     }
 
     groupEnd() {
+        if (!this.enabled) return;
         console.groupEnd();
     }
 
     table(data) {
+        if (!this.enabled) return;
         console.table(data);
     }
 
     time(label) {
+        if (!this.enabled) return;
         console.time(`⏱️ ${label}`);
     }
 
     timeEnd(label) {
+        if (!this.enabled) return;
         console.timeEnd(`⏱️ ${label}`);
     }
+}
+
+// Log inicial sobre el modo
+if (IS_PRODUCTION) {
+    console.log(
+        '%c🚀 MovieFinder - Modo Producción', 
+        'color: #4caf50; font-weight: bold; font-size: 14px;'
+    );
+    console.log(
+        '%cLos logs están limitados a advertencias y errores', 
+        'color: #9e9e9e; font-size: 12px;'
+    );
+} else {
+    console.log(
+        '%c🛠️ MovieFinder - Modo Desarrollo', 
+        'color: #2196f3; font-weight: bold; font-size: 14px;'
+    );
+    console.log(
+        '%cLogs completos habilitados', 
+        'color: #9e9e9e; font-size: 12px;'
+    );
 }
 
 // Instancias de logger por módulo
