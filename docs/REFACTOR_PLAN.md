@@ -3,23 +3,6 @@
 ## Objetivo
 
 Migrar de arquitectura monolítica (main.js 860 líneas) a arquitectura modular escalable.
-
-## Cronograma
-
-### Refactor #1: Core (State + Router + EventBus) - 3 horas
-**Branch:** `refactor/01-core-modules`
-
-- [ ] Implementar `State.js` con patrón Observer
-- [ ] Implementar `Router.js` con sistema de rutas
-- [ ] Implementar `EventBus.js` para comunicación
-- [ ] Tests unitarios básicos
-- [ ] Documentar API de cada módulo
-
-**Archivos afectados:**
-- `js/core/State.js` (nuevo)
-- `js/core/Router.js` (nuevo)
-- `js/core/EventBus.js` (nuevo)
-
 **Tests:**
 ```bash
 npm test -- core
