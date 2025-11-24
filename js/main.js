@@ -192,6 +192,8 @@ function applyFiltersToMovies(movies) {
             const year = new Date(movie.release_date).getFullYear();
             
             switch (currentFilters.year) {
+                case '2025':
+                    return year === 2025;
                 case '2024':
                 case '2023':
                 case '2022':
