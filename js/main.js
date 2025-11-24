@@ -907,7 +907,11 @@ async function initApp() {
 
 // Iniciar la aplicación cuando el DOM esté listo
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', () => {
+        initApp();
+        initializeMobileNavigation();
+    });
 } else {
     initApp();
+    initializeMobileNavigation();
 }
