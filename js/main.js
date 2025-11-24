@@ -5,7 +5,7 @@ import { getRandomMovie, currentRecommendedMovie, resetRecommendationHistory } f
 import { getFavorites, getWatchedMovies, isFavorite, isWatched } from './storage.js';
 import { showLoader, hideLoader, clearResults, showEmptyMessage, sectionTitle, resultsGrid, modal } from './utils.js';
 import { mainLogger } from './logger.js';
-import { syncNavigationState, updateNavigationBadges, isMobileDevice } from './mobile-nav.js';
+import { syncNavigationState, updateNavigationBadges, isMobileDevice, initializeMobileNavigation } from './mobile-nav.js';
 import { intelligentSearch, processSearchResults } from './search.js';
 
 // Estado de la aplicación
