@@ -791,6 +791,10 @@ if (modal) {
     modal.addEventListener('movie-state-changed', () => {
         mainLogger.debug('🔔 Evento movie-state-changed recibido');
         updateGrid();
+        // Actualizar badges de favoritos y vistas
+        const favCount = StorageService.getFavorites().length;
+        const watchedCount = StorageService.getWatched().length;
+        updateNavigationBadges(favCount, watchedCount);
     });
 }
 
