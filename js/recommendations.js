@@ -1,4 +1,4 @@
-import { fetchFromAPI } from './api.js';
+import { TMDBService } from './services/TMDBService.js';
 import { displayRecommendedMovie } from './ui.js';
 import { showLoader, hideLoader } from './utils.js';
 import { recommendationsLogger } from './logger.js';
@@ -43,22 +43,22 @@ function saveRecommendationHistory(history) {
  */
 export async function getRandomMovie() {
     const genreId = document.getElementById('recommendation-genre').value;
-    const genreName = genreId 
+    const genreName = genreId
         ? document.getElementById('recommendation-genre').selectedOptions[0].text
         : 'Cualquier género';
-    
+
     recommendationsLogger.info(`🎬 Solicitando recomendación de: ${genreName}`);
-    
+
     // Usar múltiples páginas aleatorias para mayor variedad
     const randomPage = Math.floor(Math.random() * 5) + 1;
     recommendationsLogger.debug(`Página aleatoria seleccionada: ${randomPage}`);
-    
-    const endpoint = genreId 
+
+    const endpoint = genreId
         ? `discover/movie?with_genres=${genreId}&sort_by=vote_average.desc&vote_count.gte=500&page=${randomPage}`
         : `movie/top_rated?page=${randomPage}`;
-    
+
     showLoader();
-    const data = await fetchFromAPI(endpoint);
+    const data = await TMDBService.fetchFromAPI(endpoint);
     hideLoader();
 
     if (!data || !data.results || data.results.length === 0) {
@@ -68,7 +68,7 @@ export async function getRandomMovie() {
     }
 
     recommendationsLogger.info(`📊 ${data.results.length} candidatos disponibles`);
-    
+
     // Obtener historial persistente
     let recommendedHistory = getRecommendationHistory();
     recommendationsLogger.debug(`Historial actual: ${recommendedHistory.length} películas`);
@@ -79,7 +79,7 @@ export async function getRandomMovie() {
     );
 
     const moviesToChooseFrom = availableMovies.length > 0 ? availableMovies : data.results;
-    
+
     if (availableMovies.length === 0) {
         recommendationsLogger.warn('⚠️ Todas las películas ya fueron mostradas, limpiando historial');
         recommendedHistory = [];
@@ -87,7 +87,7 @@ export async function getRandomMovie() {
     } else {
         recommendationsLogger.debug(`${availableMovies.length} películas no vistas disponibles`);
     }
-    
+
     // Seleccionar película aleatoria
     const randomIndex = Math.floor(Math.random() * moviesToChooseFrom.length);
     currentRecommendedMovie = moviesToChooseFrom[randomIndex];
@@ -102,7 +102,7 @@ export async function getRandomMovie() {
 
     // Agregar al historial
     recommendedHistory.push(currentRecommendedMovie.id);
-    
+
     // Mantener solo las últimas MAX_HISTORY películas
     if (recommendedHistory.length > MAX_HISTORY) {
         const removed = recommendedHistory.shift();

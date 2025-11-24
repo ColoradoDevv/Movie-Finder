@@ -1,47 +1,3 @@
-# Plan de Refactorización MovieFinder
-
-## Objetivo
-
-Migrar de arquitectura monolítica (main.js 860 líneas) a arquitectura modular escalable.
-**Tests:**
-```bash
-npm test -- core
-```
-
----
-
-### Refactor #2: Services - 2 horas
-**Branch:** `refactor/02-services`
-
-- [ ] Renombrar `api.js` → `TMDBService.js`
-- [ ] Renombrar `storage.js` → `StorageService.js`
-- [ ] Crear `FiltersService.js` (extraer de main.js)
-- [ ] Crear `CacheService.js` (opcional)
-- [ ] Actualizar imports
-
-**Archivos afectados:**
-- `js/api.js` → `js/services/TMDBService.js`
-- `js/storage.js` → `js/services/StorageService.js`
-- `js/services/FiltersService.js` (nuevo)
-
----
-
-### Refactor #3: MoviesController - 4 horas
-**Branch:** `refactor/03-movies-controller`
-
-- [ ] Crear `MoviesController.js`
-- [ ] Migrar `loadPopularMovies()` → `loadPopular()`
-- [ ] Migrar `loadTopRatedMovies()` → `loadTopRated()`
-- [ ] Migrar `loadUpcomingMovies()` → `loadUpcoming()`
-- [ ] Consolidar en método genérico `#loadMovies()`
-- [ ] Implementar `loadByGenre()`
-- [ ] Implementar `loadMore()`
-- [ ] Integrar con State.js
-
-**Archivos afectados:**
-- `js/controllers/MoviesController.js` (nuevo)
-- `js/main.js` (reducir ~200 líneas)
-
 ---
 
 ### Refactor #4: Search, Filters, Favorites Controllers - 3 horas
@@ -107,27 +63,6 @@ npm test -- core
 Antes de mergear cada refactor:
 
 - [ ] Código funciona sin errores
-- [ ] Tests pasan (si aplica)
-- [ ] Documentación actualizada
-- [ ] Sin console.logs de debug
-- [ ] Commit descriptivo
-- [ ] PR creado y revisado
-
-## Métricas de Éxito
-
-| Métrica | Antes | Meta | Actual |
-|---------|-------|------|--------|
-| Líneas en app.js | 860 | 50 | - |
-| Archivos JS | 10 | 25 | - |
-| Código duplicado | Alto | Ninguno | - |
-| Tests unitarios | 0 | 20+ | - |
-| Cobertura | 0% | 60%+ | - |
-
-## Riesgos
-
-1. **Romper funcionalidad existente**
-   - Mitigación: Tests manuales después de cada refactor
-   
 2. **Merge conflicts**
    - Mitigación: Refactors pequeños, merges frecuentes
    
@@ -135,4 +70,4 @@ Antes de mergear cada refactor:
    - Mitigación: Lighthouse audit antes/después
 
 
-Última actualización: [23/11/2025]
+Última actualización: [24/11/2025]

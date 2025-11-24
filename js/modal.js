@@ -1,7 +1,7 @@
 import { imageBaseUrl, youtubeBaseUrl } from './config.js';
-import { addToFavorites, removeFromFavorites, addToWatched, removeFromWatched, isFavorite, isWatched } from './storage.js';
+import { StorageService } from './services/StorageService.js';
 import { formatDate } from './utils.js';
-import { getMovieDetails } from './api.js';
+import { TMDBService } from './services/TMDBService.js';
 import { modalLogger } from './logger.js';
 
 const modal = document.getElementById('movie-modal');
@@ -28,7 +28,7 @@ export function openModal(details) {
     cleanupEventListeners();
 
     const modalBody = document.getElementById('modal-body');
-    
+
     const trailer = details.videos?.results?.find(v => v.type === 'Trailer') || details.videos?.results?.[0] || null;
     const trailerEmbed = trailer ? `${youtubeBaseUrl}${trailer.key}` : null;
 
@@ -39,8 +39,8 @@ export function openModal(details) {
     }
 
     const genres = details.genres?.map(g => g.name).join(', ') || 'Sin género';
-    const isFav = isFavorite(details.id);
-    const isWatch = isWatched(details.id);
+    const isFav = StorageService.isFavorite(details.id);
+    const isWatch = StorageService.isWatched(details.id);
 
     modalLogger.debug('Estado de la película:', {
         favorito: isFav ? 'SÍ' : 'NO',
@@ -60,12 +60,12 @@ export function openModal(details) {
     });
 
     // Validaciones
-    const voteAverage = (details.vote_average && details.vote_average > 0) 
-        ? details.vote_average.toFixed(1) 
+    const voteAverage = (details.vote_average && details.vote_average > 0)
+        ? details.vote_average.toFixed(1)
         : 'N/A';
 
-    const posterUrl = details.poster_path 
-        ? imageBaseUrl + details.poster_path 
+    const posterUrl = details.poster_path
+        ? imageBaseUrl + details.poster_path
         : 'https://via.placeholder.com/300x450/1f1f1f/808080?text=Sin+Poster';
 
     // Iconos SVG
@@ -206,31 +206,31 @@ export function openModal(details) {
  */
 function setupModalEventListeners(details) {
     const modalBody = document.getElementById('modal-body');
-    
+
     // Obtener referencias a los botones
     currentFavoriteBtn = modalBody.querySelector('[data-action="favorite"]');
     currentWatchedBtn = modalBody.querySelector('[data-action="watched"]');
 
     // Crear handlers
     currentFavoriteHandler = () => {
-        modalLogger.info(`${isFavorite(details.id) ? '🗑️ Removiendo' : '❤️ Añadiendo'} "${details.title}" de favoritos`);
-        
-        if (isFavorite(details.id)) {
-            removeFromFavorites(details.id);
+        modalLogger.info(`${StorageService.isFavorite(details.id) ? '🗑️ Removiendo' : '❤️ Añadiendo'} "${details.title}" de favoritos`);
+
+        if (StorageService.isFavorite(details.id)) {
+            StorageService.removeFromFavorites(details.id);
         } else {
-            addToFavorites(details);
+            StorageService.addToFavorites(details);
         }
         openModal(details); // Re-abrir para actualizar estado
         modal.dispatchEvent(new CustomEvent('movie-state-changed'));
     };
 
     currentWatchedHandler = () => {
-        modalLogger.info(`${isWatched(details.id) ? '🗑️ Removiendo' : '✅ Marcando'} "${details.title}" como vista`);
-        
-        if (isWatched(details.id)) {
-            removeFromWatched(details.id);
+        modalLogger.info(`${StorageService.isWatched(details.id) ? '🗑️ Removiendo' : '✅ Marcando'} "${details.title}" como vista`);
+
+        if (StorageService.isWatched(details.id)) {
+            StorageService.removeFromWatched(details.id);
         } else {
-            addToWatched(details);
+            StorageService.addToWatched(details);
         }
         openModal(details); // Re-abrir para actualizar estado
         modal.dispatchEvent(new CustomEvent('movie-state-changed'));
@@ -241,7 +241,7 @@ function setupModalEventListeners(details) {
         currentFavoriteBtn.addEventListener('click', currentFavoriteHandler);
         modalLogger.debug('✓ Listener de favoritos agregado');
     }
-    
+
     if (currentWatchedBtn) {
         currentWatchedBtn.addEventListener('click', currentWatchedHandler);
         modalLogger.debug('✓ Listener de vistas agregado');
@@ -250,14 +250,14 @@ function setupModalEventListeners(details) {
     // Películas similares
     const similarElements = modalBody.querySelectorAll('.similar-movie');
     modalLogger.debug(`📎 Adjuntando ${similarElements.length} listeners a películas similares`);
-    
+
     similarElements.forEach(el => {
         const handler = async () => {
             const movieId = el.dataset.movieId;
             if (movieId) {
                 modalLogger.info(`🔄 Cargando película similar ID: ${movieId}`);
                 try {
-                    const data = await getMovieDetails(movieId);
+                    const data = await TMDBService.getMovieDetails(movieId);
                     if (data) openModal(data);
                 } catch (error) {
                     modalLogger.error('Error al cargar película similar:', error);
@@ -267,7 +267,7 @@ function setupModalEventListeners(details) {
         el.addEventListener('click', handler);
         currentSimilarHandlers.push({ element: el, handler });
     });
-    
+
     modalLogger.success('✓ Todos los event listeners del modal configurados');
 }
 
@@ -280,12 +280,12 @@ function cleanupEventListeners() {
         currentFavoriteBtn.removeEventListener('click', currentFavoriteHandler);
         modalLogger.debug('🧹 Listener de favoritos removido');
     }
-    
+
     if (currentWatchedBtn && currentWatchedHandler) {
         currentWatchedBtn.removeEventListener('click', currentWatchedHandler);
         modalLogger.debug('🧹 Listener de vistas removido');
     }
-    
+
     // Remover listeners de películas similares
     if (currentSimilarHandlers.length > 0) {
         modalLogger.debug(`🧹 Limpiando ${currentSimilarHandlers.length} event listeners de similares`);
@@ -294,13 +294,13 @@ function cleanupEventListeners() {
         });
         currentSimilarHandlers = [];
     }
-    
+
     // Resetear referencias
     currentFavoriteBtn = null;
     currentWatchedBtn = null;
     currentFavoriteHandler = null;
     currentWatchedHandler = null;
-    
+
     modalLogger.debug('✓ Limpieza de event listeners completada');
 }
 
@@ -309,15 +309,15 @@ function cleanupEventListeners() {
  */
 export function closeModal() {
     if (!modal) return;
-    
+
     modalLogger.info('✖️ Cerrando modal');
-    
+
     // Limpiar event listeners antes de cerrar
     cleanupEventListeners();
-    
+
     modal.classList.remove('active');
     document.body.classList.remove('modal-open');
-    
+
     modalLogger.success('✓ Modal cerrado correctamente');
 }
 
