@@ -152,6 +152,10 @@ export class State {
                 displayed: [],
                 searchQuery: ''
             },
+            user: {
+                favorites: [],
+                watched: []
+            },
             recommendations: {
                 current: null,
                 history: []
