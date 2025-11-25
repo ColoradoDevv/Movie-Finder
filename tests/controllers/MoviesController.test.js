@@ -1,4 +1,5 @@
 import { MoviesController } from '../../js/controllers/MoviesController.js';
+import { mainLogger } from '../../js/logger.js';
 import { TMDBService } from '../../js/services/TMDBService.js';
 import { StorageService } from '../../js/services/StorageService.js';
 import { FiltersService } from '../../js/services/FiltersService.js';
@@ -215,6 +216,157 @@ describe('MoviesController', () => {
             controller.displayFavorites();
 
             expect(utils.showEmptyMessage).toHaveBeenCalledWith(expect.stringContaining('Aún no tienes películas'));
+        });
+    });
+
+
+    // Additional rigorous tests for edge cases
+    describe('Init Genres Failure', () => {
+        it('should handle error when loading genres', async () => {
+            TMDBService.loadGenres.mockRejectedValue(new Error('Network error'));
+            await controller.initGenres();
+            expect(mainLogger.error).toHaveBeenCalledWith(expect.stringContaining('Error al inicializar géneros'));
+        });
+    });
+
+    describe('Christmas Movies', () => {
+        it('should filter and display only christmas related movies', async () => {
+            const mixedMovies = [
+                { id: 1, title: 'Christmas Carol' },
+                { id: 2, title: 'Random Movie' },
+                { id: 3, title: 'Navidad en la ciudad' }
+            ];
+            TMDBService.getMovies.mockResolvedValue({ results: mixedMovies, total_pages: 1 });
+            await controller.loadChristmasMovies();
+            expect(utils.showLoader).toHaveBeenCalled();
+            expect(utils.hideLoader).toHaveBeenCalled();
+            // Expect only the christmas related movies to be displayed
+            expect(ui.displayMovies).toHaveBeenCalledWith([
+                { id: 1, title: 'Christmas Carol' },
+                { id: 3, title: 'Navidad en la ciudad' }
+            ]);
+        });
+    });
+
+    describe('Pagination Edge Cases', () => {
+        it('should not call TMDBService when already on last page', async () => {
+            controller.state.currentPage = 3;
+            controller.state.totalPages = 3;
+            await controller.loadMore();
+            expect(TMDBService.getMovies).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Christmas Movies Fallback', () => {
+        it('should fallback to raw results if no christmas keywords found', async () => {
+            const genericMovies = [
+                { id: 1, title: 'Action Movie' },
+                { id: 2, title: 'Comedy Movie' }
+            ];
+            TMDBService.getMovies.mockResolvedValue({ results: genericMovies, total_pages: 1 });
+
+            await controller.loadChristmasMovies();
+
+            expect(ui.displayMovies).toHaveBeenCalledWith(genericMovies);
+            expect(mainLogger.success).toHaveBeenCalledWith(expect.stringContaining('películas relacionadas cargadas'));
+        });
+
+        it('should handle empty results gracefully', async () => {
+            TMDBService.getMovies.mockResolvedValue({ results: [], total_pages: 1 });
+
+            await controller.loadChristmasMovies();
+
+            expect(utils.showEmptyMessage).toHaveBeenCalledWith(expect.stringContaining('No se encontraron películas navideñas'));
+        });
+    });
+
+    describe('Update Grid DOM Updates', () => {
+        it('should update badges on existing cards', () => {
+            // Setup DOM with a movie card
+            document.body.innerHTML += `
+            <div id="results-grid">
+                <div class="movie-card" data-movie-id="101">
+                    <div class="movie-info"></div>
+                </div>
+            </div>
+        `;
+
+            const mockCard = document.createElement('div');
+            mockCard.className = 'movie-card';
+            mockCard.dataset.movieId = '101';
+
+            utils.resultsGrid.querySelectorAll.mockReturnValue([mockCard]);
+
+            StorageService.isFavorite.mockReturnValue(true);
+            StorageService.isWatched.mockReturnValue(true);
+            StorageService.getFavorites.mockReturnValue([{ id: 101 }]);
+            StorageService.getWatchedMovies.mockReturnValue([{ id: 101 }]);
+
+            controller.updateGrid();
+
+            expect(mockCard.querySelectorAll('.movie-status').length).toBe(2);
+        });
+    });
+
+    describe('Load More Filtering', () => {
+        it('should filter out non-movie media types', async () => {
+            controller.state.currentPage = 1;
+            controller.state.totalPages = 5;
+            controller.state.allMoviesCache = [];
+
+            const mixedResults = [
+                { id: 1, title: 'Movie 1', media_type: 'movie' },
+                { id: 2, name: 'Person 1', media_type: 'person' },
+                { id: 3, title: 'Movie 2' } // implicit movie
+            ];
+
+            TMDBService.getMovies.mockResolvedValue({ results: mixedResults, page: 2, total_pages: 5 });
+            FiltersService.applyFilters.mockImplementation(m => m);
+
+            await controller.loadMore();
+
+            expect(controller.state.allMoviesCache.length).toBe(2);
+            expect(controller.state.allMoviesCache.find(m => m.id === 2)).toBeUndefined();
+        });
+    });
+
+    describe('Init Genres DOM Cleanup', () => {
+        it('should clear existing genres before adding new ones', async () => {
+            // Setup initial DOM with garbage
+            const genreNav = document.getElementById('genre-nav');
+            genreNav.innerHTML = '<button>Old Genre</button>';
+
+            TMDBService.loadGenres.mockResolvedValue({
+                genres: [{ id: 1, name: 'New Genre' }]
+            });
+
+            await controller.initGenres();
+
+            expect(genreNav.innerHTML).not.toContain('Old Genre');
+            expect(genreNav.textContent).toContain('New Genre');
+            expect(genreNav.textContent).toContain('Películas Navideñas'); // The hardcoded one
+        });
+    });
+
+    describe('Navigation Default Case', () => {
+        it('should log warning for unknown section', async () => {
+            await controller.navigateToSection('unknown-section');
+            expect(mainLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Sección desconocida'));
+        });
+    });
+
+    describe('Update Grid Behavior', () => {
+        it('should delegate to displayFavorites when currentSection is favorites', () => {
+            const spy = jest.spyOn(controller, 'displayFavorites').mockImplementation();
+            controller.state.currentSection = 'favorites';
+            controller.updateGrid();
+            expect(spy).toHaveBeenCalled();
+        });
+        it('should delegate to displayHistory when currentSection is history', () => {
+            const spy = jest.spyOn(controller, 'displayHistory').mockImplementation();
+            controller.state.currentSection = 'history';
+            controller.updateGrid();
+            expect(spy).toHaveBeenCalled();
         });
     });
 });
