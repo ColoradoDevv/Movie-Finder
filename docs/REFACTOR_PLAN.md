@@ -93,6 +93,7 @@
 - [x] Extraer displayFavorites y displayHistory
 - [x] Implementar updateGrid
 - [x] Tests unitarios
+  - [x] Tests exhaustivos (coverage de edge cases)
 
 **Archivos afectados:**
 - `js/controllers/MoviesController.js`
@@ -234,7 +235,7 @@ Total de líneas en main.js: ~1100
 Líneas refactorizadas:     ~0 (0%)
 Líneas pendientes:         ~1100 (100%)
 
-Tests unitarios: 32/32 ✅
+Tests unitarios: 55/55 ✅
 Cobertura total: 54.33%
 Cobertura services: 80.76% ✅
 ```
