@@ -8,20 +8,10 @@ import { showLoader, hideLoader, clearResults, showEmptyMessage, sectionTitle, r
 import { mainLogger } from './logger.js';
 import { syncNavigationState, updateNavigationBadges, isMobileDevice, initializeMobileNavigation } from './mobile-nav.js';
 import { intelligentSearch, processSearchResults } from './search.js';
+import { MoviesController } from './controllers/MoviesController.js';
 
-// Estado de la aplicación
-let currentPage = 1;
-let totalPages = 1;
-let currentEndpoint = 'movie/popular';
-let activeGenre = null;
-let currentSection = 'popular';
-let allMoviesCache = [];
-let currentSearchQuery = '';
-let currentFilters = {
-    sortBy: 'default',
-    year: '',
-    rating: ''
-};
+// Inicializar Controlador
+const moviesController = new MoviesController();
 
 // Referencias a elementos del DOM
 const searchInput = document.getElementById('searchInput');
@@ -42,156 +32,8 @@ const filterYearSelect = document.getElementById('filter-year');
 const filterRatingSelect = document.getElementById('filter-rating');
 const applyFiltersBtn = document.getElementById('apply-filters');
 const resetFiltersBtn = document.getElementById('reset-filters');
-const resultsCount = document.getElementById('results-count');
-
-// Referencias a botones de navegación del sidebar
-const sidebarNavButtons = document.querySelectorAll('.sidebar-nav-item[data-section]');
-const bottomNavButtons = document.querySelectorAll('.bottom-nav-item[data-section]');
 
 mainLogger.info('🚀 MovieFinder iniciando...');
-mainLogger.group('Estado inicial de la aplicación');
-mainLogger.info(`Sección actual: ${currentSection}`);
-mainLogger.info(`Endpoint actual: ${currentEndpoint}`);
-mainLogger.info(`Página actual: ${currentPage}/${totalPages}`);
-mainLogger.groupEnd();
-
-// ============================================
-// FUNCIONES DE NAVEGACIÓN
-// ============================================
-
-/**
- * Maneja la navegación entre secciones
- */
-async function navigateToSection(section) {
-    mainLogger.info(`🧭 Navegando a: ${section}`);
-
-    currentSection = section;
-    syncNavigationState(section);
-
-    switch (section) {
-        case 'popular':
-            await loadPopularMovies();
-            break;
-        case 'top-rated':
-            await loadTopRatedMovies();
-            break;
-        case 'upcoming':
-            await loadUpcomingMovies();
-            break;
-        default:
-            mainLogger.warn(`Sección desconocida: ${section}`);
-    }
-}
-
-/**
- * Carga películas mejor valoradas
- */
-async function loadTopRatedMovies() {
-    try {
-        mainLogger.info('⭐ Cargando películas mejor valoradas...');
-
-        currentSection = 'top-rated';
-        currentEndpoint = 'movie/top_rated';
-        sectionTitle.textContent = 'Películas mejor valoradas';
-        sectionTitle.classList.remove('christmas-title');
-        searchInput.value = '';
-        currentSearchQuery = '';
-        allMoviesCache = [];
-
-        if (activeGenre) {
-            activeGenre.classList.remove('active');
-            activeGenre = null;
-        }
-
-        showLoader();
-        const data = await TMDBService.getMovies(currentEndpoint, 1);
-        hideLoader();
-
-        if (data && data.results) {
-            clearResults();
-            allMoviesCache = [...data.results];
-            const filteredMovies = applyFiltersToMovies(allMoviesCache);
-            displayMovies(filteredMovies);
-            updateResultsCount(filteredMovies.length, allMoviesCache.length);
-            currentPage = 1;
-            totalPages = data.total_pages;
-            loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-
-            mainLogger.success(`✓ Películas mejor valoradas cargadas (Página 1/${totalPages})`);
-        } else {
-            showEmptyMessage('No se pudieron cargar las películas mejor valoradas');
-            updateResultsCount(0, 0);
-        }
-    } catch (error) {
-        hideLoader();
-        mainLogger.error('Error al cargar películas mejor valoradas:', error);
-        showNetworkError();
-    }
-}
-
-/**
- * Carga películas próximamente
- */
-async function loadUpcomingMovies() {
-    try {
-        mainLogger.info('📅 Cargando próximos estrenos...');
-
-        currentSection = 'upcoming';
-        currentEndpoint = 'movie/upcoming';
-        sectionTitle.textContent = 'Próximos estrenos';
-        sectionTitle.classList.remove('christmas-title');
-        searchInput.value = '';
-        currentSearchQuery = '';
-        allMoviesCache = [];
-
-        if (activeGenre) {
-            activeGenre.classList.remove('active');
-            activeGenre = null;
-        }
-
-        showLoader();
-        const data = await TMDBService.getMovies(currentEndpoint, 1);
-        hideLoader();
-
-        if (data && data.results) {
-            clearResults();
-            allMoviesCache = [...data.results];
-            const filteredMovies = applyFiltersToMovies(allMoviesCache);
-            displayMovies(filteredMovies);
-            updateResultsCount(filteredMovies.length, allMoviesCache.length);
-            currentPage = 1;
-            totalPages = data.total_pages;
-            loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-
-            mainLogger.success(`✓ Próximos estrenos cargados (Página 1/${totalPages})`);
-        } else {
-            showEmptyMessage('No se pudieron cargar los próximos estrenos');
-            updateResultsCount(0, 0);
-        }
-    } catch (error) {
-        hideLoader();
-        mainLogger.error('Error al cargar próximos estrenos:', error);
-        showNetworkError();
-    }
-}
-
-// ============================================
-// FUNCIONES DE FILTRADO
-// ============================================
-
-function applyFiltersToMovies(movies) {
-    return FiltersService.applyFilters(movies, currentFilters);
-}
-
-function updateResultsCount(count, total) {
-    if (resultsCount) {
-        if (count === total) {
-            resultsCount.textContent = `Mostrando ${count} ${count === 1 ? 'película' : 'películas'}`;
-        } else {
-            resultsCount.textContent = `Mostrando ${count} de ${total} ${total === 1 ? 'película' : 'películas'}`;
-        }
-    }
-}
 
 // ============================================
 // EVENT LISTENERS DE FILTROS
@@ -201,17 +43,17 @@ if (applyFiltersBtn) {
     applyFiltersBtn.addEventListener('click', () => {
         mainLogger.info('🔍 Aplicando filtros...');
 
-        currentFilters.sortBy = sortBySelect.value;
-        currentFilters.year = filterYearSelect.value;
-        currentFilters.rating = filterRatingSelect.value;
+        moviesController.state.currentFilters.sortBy = sortBySelect.value;
+        moviesController.state.currentFilters.year = filterYearSelect.value;
+        moviesController.state.currentFilters.rating = filterRatingSelect.value;
 
-        mainLogger.debug('Filtros aplicados:', currentFilters);
+        mainLogger.debug('Filtros aplicados:', moviesController.state.currentFilters);
 
-        if (allMoviesCache.length > 0) {
-            const filteredMovies = applyFiltersToMovies(allMoviesCache);
+        if (moviesController.state.allMoviesCache.length > 0) {
+            const filteredMovies = moviesController.applyFiltersToMovies(moviesController.state.allMoviesCache);
             clearResults();
             displayMovies(filteredMovies);
-            updateResultsCount(filteredMovies.length, allMoviesCache.length);
+            moviesController.updateResultsCount(filteredMovies.length, moviesController.state.allMoviesCache.length);
             mainLogger.success(`✓ Filtros aplicados: ${filteredMovies.length} resultados`);
         }
     });
@@ -225,16 +67,16 @@ if (resetFiltersBtn) {
         filterYearSelect.value = '';
         filterRatingSelect.value = '';
 
-        currentFilters = {
+        moviesController.state.currentFilters = {
             sortBy: 'default',
             year: '',
             rating: ''
         };
 
-        if (allMoviesCache.length > 0) {
+        if (moviesController.state.allMoviesCache.length > 0) {
             clearResults();
-            displayMovies(allMoviesCache);
-            updateResultsCount(allMoviesCache.length, allMoviesCache.length);
+            displayMovies(moviesController.state.allMoviesCache);
+            moviesController.updateResultsCount(moviesController.state.allMoviesCache.length, moviesController.state.allMoviesCache.length);
         }
 
         mainLogger.success('✓ Filtros reseteados');
@@ -242,288 +84,25 @@ if (resetFiltersBtn) {
 }
 
 // ============================================
-// FUNCIONES PRINCIPALES
-// ============================================
-
-function updateGrid() {
-    mainLogger.debug('🔄 Actualizando grid de películas...');
-
-    if (currentSection === 'favorites') {
-        displayFavorites();
-        return;
-    } else if (currentSection === 'history') {
-        displayHistory();
-        return;
-    }
-
-    mainLogger.time('Actualización de estados en grid');
-
-    const cards = resultsGrid.querySelectorAll('.movie-card');
-    mainLogger.debug(`Actualizando ${cards.length} tarjetas`);
-
-    cards.forEach(card => {
-        const movieId = parseInt(card.dataset.movieId);
-        const cardIsFavorite = StorageService.isFavorite(movieId);
-        const cardIsWatched = StorageService.isWatched(movieId);
-
-        const favoriteIcon = `<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-        </svg>`;
-
-        const watchedIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12">
-            <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>`;
-
-        const existingBadges = card.querySelectorAll('.movie-status');
-        existingBadges.forEach(badge => badge.remove());
-
-        const fragment = document.createDocumentFragment();
-
-        if (cardIsFavorite) {
-            const favBadge = document.createElement('span');
-            favBadge.className = 'movie-status';
-            favBadge.style.color = '#e50914';
-            favBadge.innerHTML = favoriteIcon;
-            fragment.appendChild(favBadge);
-        }
-
-        if (cardIsWatched) {
-            const watchBadge = document.createElement('span');
-            watchBadge.className = 'movie-status';
-            watchBadge.style.color = '#46d369';
-            watchBadge.innerHTML = watchedIcon;
-            fragment.appendChild(watchBadge);
-        }
-
-        if (fragment.childNodes.length > 0) {
-            card.insertBefore(fragment, card.firstChild);
-        }
-    });
-
-    mainLogger.timeEnd('Actualización de estados en grid');
-    mainLogger.success('✓ Grid actualizado exitosamente');
-
-    // Actualizar badges de navegación
-    updateNavigationBadges(StorageService.getFavorites().length, StorageService.getWatchedMovies().length);
-}
-
-async function initGenres() {
-    try {
-        mainLogger.info('📂 Inicializando géneros...');
-        mainLogger.time('Carga de géneros');
-
-        const data = await TMDBService.loadGenres();
-
-        if (!data || !data.genres) {
-            mainLogger.error('✗ No se pudieron cargar los géneros');
-            return;
-        }
-
-        mainLogger.debug(`Procesando ${data.genres.length} géneros`);
-
-        // Crear botón especial de navidad PRIMERO
-        const christmasBtn = document.createElement('button');
-        christmasBtn.className = 'genre-btn christmas-genre';
-        christmasBtn.textContent = 'Películas Navideñas';
-        christmasBtn.dataset.genreId = 'christmas';
-        christmasBtn.setAttribute('aria-label', 'Filtrar películas navideñas');
-        genreNav.appendChild(christmasBtn);
-
-        // Agregar el resto de géneros
-        data.genres.forEach(genre => {
-            const btn = document.createElement('button');
-            btn.className = 'genre-btn';
-            btn.textContent = genre.name;
-            btn.dataset.genreId = genre.id;
-            btn.setAttribute('aria-label', `Filtrar por ${genre.name}`);
-            genreNav.appendChild(btn);
-
-            const option = document.createElement('option');
-            option.value = genre.id;
-            option.textContent = genre.name;
-            recommendationGenreSelect.appendChild(option);
-        });
-
-        mainLogger.timeEnd('Carga de géneros');
-        mainLogger.success(`✓ ${data.genres.length + 1} géneros cargados (incluido Navidad)`);
-    } catch (error) {
-        mainLogger.error('Error al inicializar géneros:', error);
-    }
-}
-
-async function loadPopularMovies() {
-    try {
-        mainLogger.info('⭐ Cargando películas populares...');
-
-        currentSection = 'popular';
-        currentEndpoint = 'movie/popular';
-        sectionTitle.textContent = 'Películas populares';
-        sectionTitle.classList.remove('christmas-title');
-        searchInput.value = '';
-        currentSearchQuery = '';
-        allMoviesCache = [];
-
-        if (activeGenre) {
-            activeGenre.classList.remove('active');
-            activeGenre = null;
-        }
-
-        showLoader();
-        const data = await TMDBService.getMovies(currentEndpoint, 1);
-        hideLoader();
-
-        if (data && data.results) {
-            clearResults();
-            allMoviesCache = [...data.results];
-            const filteredMovies = applyFiltersToMovies(allMoviesCache);
-            displayMovies(filteredMovies);
-            updateResultsCount(filteredMovies.length, allMoviesCache.length);
-            currentPage = 1;
-            totalPages = data.total_pages;
-            loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-
-            mainLogger.success(`✓ Películas populares cargadas (Página 1/${totalPages})`);
-        } else {
-            showEmptyMessage('No se pudieron cargar las películas populares');
-            updateResultsCount(0, 0);
-        }
-    } catch (error) {
-        hideLoader();
-        mainLogger.error('Error al cargar películas populares:', error);
-        showNetworkError();
-    }
-}
-
-async function loadChristmasMovies() {
-    try {
-        mainLogger.info('🎄 Cargando películas navideñas...');
-
-        currentSection = 'christmas';
-        currentEndpoint = 'search/movie?query=christmas';
-        sectionTitle.textContent = '🎄 Películas Navideñas';
-        sectionTitle.classList.add('christmas-title');
-        searchInput.value = '';
-        currentSearchQuery = '';
-        allMoviesCache = [];
-
-        if (activeGenre) {
-            activeGenre.classList.remove('active');
-        }
-
-        const christmasGenreBtn = document.querySelector('.genre-btn.christmas-genre');
-        if (christmasGenreBtn) {
-            activeGenre = christmasGenreBtn;
-            christmasGenreBtn.classList.add('active');
-        }
-
-        showLoader();
-        const data = await TMDBService.getMovies(currentEndpoint, 1);
-        hideLoader();
-
-        if (data && data.results && data.results.length > 0) {
-            const christmasMovies = data.results.filter(movie => {
-                const title = (movie.title || '').toLowerCase();
-                const originalTitle = (movie.original_title || '').toLowerCase();
-                return title.includes('christmas') ||
-                    title.includes('navidad') ||
-                    title.includes('santa') ||
-                    title.includes('noel') ||
-                    title.includes('holiday') ||
-                    originalTitle.includes('christmas') ||
-                    originalTitle.includes('santa');
-            });
-
-            clearResults();
-
-            if (christmasMovies.length > 0) {
-                allMoviesCache = [...christmasMovies];
-                displayMovies(christmasMovies);
-                currentPage = 1;
-                totalPages = data.total_pages;
-                loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-                mainLogger.success(`✓ ${christmasMovies.length} películas navideñas cargadas`);
-            } else {
-                allMoviesCache = [...data.results];
-                displayMovies(data.results);
-                currentPage = 1;
-                totalPages = data.total_pages;
-                loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-                mainLogger.success(`✓ ${data.results.length} películas relacionadas cargadas`);
-            }
-        } else {
-            showEmptyMessage('No se encontraron películas navideñas. Intenta más tarde.');
-        }
-    } catch (error) {
-        hideLoader();
-        mainLogger.error('Error al cargar películas navideñas:', error);
-        showNetworkError();
-    }
-}
-
-function displayFavorites() {
-    mainLogger.info('❤️ Mostrando favoritos...');
-    currentSection = 'favorites';
-    sectionTitle.textContent = 'Mis favoritos';
-    sectionTitle.classList.remove('christmas-title');
-    const favorites = StorageService.getFavorites();
-    clearResults();
-    loadMoreButton.style.display = 'none';
-    allMoviesCache = [];
-
-    if (favorites.length === 0) {
-        showEmptyMessage('Aún no tienes películas en favoritos');
-    } else {
-        displayMovies(favorites);
-        mainLogger.success(`✓ Mostrando ${favorites.length} favoritos`);
-    }
-
-    syncNavigationState('favorites');
-}
-
-function displayHistory() {
-    mainLogger.info('📺 Mostrando historial...');
-    currentSection = 'history';
-    sectionTitle.textContent = 'Películas vistas';
-    sectionTitle.classList.remove('christmas-title');
-    const watched = StorageService.getWatchedMovies();
-    clearResults();
-    loadMoreButton.style.display = 'none';
-    allMoviesCache = [];
-
-    if (watched.length === 0) {
-        showEmptyMessage('Aún no has marcado ninguna película como vista');
-    } else {
-        displayMovies(watched);
-        mainLogger.success(`✓ Mostrando ${watched.length} películas vistas`);
-    }
-
-    syncNavigationState('history');
-}
-
-function showNetworkError() {
-    showEmptyMessage('⚠️ Error de conexión. Por favor verifica tu conexión a Internet e intenta de nuevo.');
-}
-
-// ============================================
 // EVENT LISTENERS
 // ============================================
 
 // Navegación del sidebar
-sidebarNavButtons.forEach(button => {
+document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(button => {
     button.addEventListener('click', () => {
         const section = button.dataset.section;
         if (section) {
-            navigateToSection(section);
+            moviesController.navigateToSection(section);
         }
     });
 });
 
 // Navegación del bottom nav (mobile)
-bottomNavButtons.forEach(button => {
+document.querySelectorAll('.bottom-nav-item[data-section]').forEach(button => {
     button.addEventListener('click', () => {
         const section = button.dataset.section;
         if (section) {
-            navigateToSection(section);
+            moviesController.navigateToSection(section);
         }
     });
 });
@@ -532,12 +111,11 @@ bottomNavButtons.forEach(button => {
 if (homeButton) {
     homeButton.addEventListener('click', () => {
         mainLogger.info('🏠 Botón Home presionado');
-        loadPopularMovies();
-        syncNavigationState('popular');
+        moviesController.navigateToSection('popular');
     });
 }
 
-// Búsqueda INTELIGENTE - NUEVA IMPLEMENTACIÓN
+// Búsqueda INTELIGENTE
 if (searchInput) {
     const performSearch = async () => {
         const query = searchInput.value.trim();
@@ -555,41 +133,34 @@ if (searchInput) {
         try {
             mainLogger.info(`🔍 Búsqueda inteligente iniciada: "${query}"`);
 
-            currentSection = 'search';
-            currentSearchQuery = query;
-            sectionTitle.textContent = `Buscando: "${query}"`;
-            sectionTitle.classList.remove('christmas-title');
-
-            if (activeGenre) {
-                activeGenre.classList.remove('active');
-                activeGenre = null;
-            }
-
             showLoader();
-
-            // Usar búsqueda inteligente
-            const searchResults = await intelligentSearch(query, 1);
-
+            const results = await intelligentSearch(query, 1);
             hideLoader();
 
-            if (searchResults) {
+            if (results) {
+                // Actualizar estado del controlador para permitir paginación
+                moviesController.state.currentSection = 'search';
+                moviesController.state.currentSearchQuery = query;
+                moviesController.state.currentEndpoint = `search/multi?query=${encodeURIComponent(query)}`;
+                moviesController.state.currentPage = 1;
+                moviesController.state.totalPages = results.total_pages;
+                moviesController.state.allMoviesCache = results.movies || [];
+
                 // Procesar y mostrar resultados
-                await processSearchResults(searchResults, query);
+                await processSearchResults(results, query);
 
-                // Actualizar cache y paginación
-                allMoviesCache = searchResults.movies || [];
-                currentPage = searchResults.page || 1;
-                totalPages = searchResults.total_pages || 1;
-                loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
+                // Actualizar botón de cargar más
+                moviesController._updateLoadMoreButton();
 
-                mainLogger.success(`✓ Búsqueda completada: ${searchResults.movies?.length || 0} películas encontradas`);
-            } else {
-                showEmptyMessage(`No se encontraron resultados para "${query}"`);
+                // Actualizar contador de resultados
+                if (results.movies) {
+                    moviesController.updateResultsCount(results.movies.length, results.total_results);
+                }
             }
         } catch (error) {
             hideLoader();
             mainLogger.error('Error en búsqueda:', error);
-            showNetworkError();
+            showEmptyMessage('⚠️ Error de conexión. Por favor verifica tu conexión a Internet e intenta de nuevo.');
         }
     };
 
@@ -602,7 +173,7 @@ if (searchInput) {
 
     // Buscar al perder foco (opcional)
     searchInput.addEventListener('blur', () => {
-        if (searchInput.value.trim() && searchInput.value.trim() !== currentSearchQuery) {
+        if (searchInput.value.trim() && searchInput.value.trim() !== moviesController.state.currentSearchQuery) {
             performSearch();
         }
     });
@@ -615,87 +186,25 @@ if (genreNav) {
         if (!btn) return;
 
         if (btn.classList.contains('christmas-genre')) {
-            loadChristmasMovies();
+            moviesController.loadChristmasMovies();
             return;
         }
 
-        try {
-            const genreName = btn.textContent;
-            const genreId = btn.dataset.genreId;
+        const genreName = btn.textContent;
+        const genreId = btn.dataset.genreId;
 
-            mainLogger.info(`🎭 Filtro de género aplicado: ${genreName}`);
+        if (moviesController.state.activeGenre) moviesController.state.activeGenre.classList.remove('active');
+        moviesController.state.activeGenre = btn;
+        btn.classList.add('active');
 
-            if (activeGenre) activeGenre.classList.remove('active');
-            activeGenre = btn;
-            btn.classList.add('active');
-
-            currentSection = 'genre';
-            currentEndpoint = `discover/movie?with_genres=${genreId}`;
-            sectionTitle.textContent = genreName;
-            sectionTitle.classList.remove('christmas-title');
-            searchInput.value = '';
-            currentSearchQuery = '';
-
-            showLoader();
-            const data = await TMDBService.getMovies(currentEndpoint, 1);
-            hideLoader();
-
-            if (data) {
-                clearResults();
-                allMoviesCache = [...data.results];
-                displayMovies(data.results);
-                currentPage = 1;
-                totalPages = data.total_pages;
-                loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
-                mainLogger.success(`✓ ${data.results.length} películas de ${genreName}`);
-            }
-        } catch (error) {
-            hideLoader();
-            mainLogger.error('Error al filtrar por género:', error);
-            showNetworkError();
-        }
+        moviesController.loadMoviesByGenre(genreId, genreName);
     });
 }
 
-// Cargar más - CORREGIDO con filtros
+// Cargar más
 if (loadMoreButton) {
-    loadMoreButton.addEventListener('click', async () => {
-        if (currentPage >= totalPages) return;
-
-        try {
-            mainLogger.info(`📄 Cargando página ${currentPage + 1}/${totalPages}...`);
-
-            showLoader();
-            const data = await TMDBService.getMovies(currentEndpoint, currentPage + 1);
-            hideLoader();
-
-            if (data && data.results) {
-                // Agregar a cache
-                allMoviesCache = [...allMoviesCache, ...data.results];
-
-                // Aplicar filtros a las nuevas películas
-                const filteredNewMovies = applyFiltersToMovies(data.results);
-
-                // Mostrar solo las nuevas películas filtradas
-                displayMovies(filteredNewMovies);
-
-                // Actualizar contador con todas las películas filtradas
-                const allFilteredMovies = applyFiltersToMovies(allMoviesCache);
-                updateResultsCount(allFilteredMovies.length, allMoviesCache.length);
-
-                currentPage = data.page;
-                if (currentPage >= data.total_pages) {
-                    loadMoreButton.style.display = 'none';
-                    mainLogger.info('✓ Todas las páginas cargadas');
-                }
-
-                mainLogger.success(`✓ Página ${currentPage} cargada y filtrada`);
-            }
-        } catch (error) {
-            hideLoader();
-            mainLogger.error('Error al cargar más películas:', error);
-            showNetworkError();
-        }
+    loadMoreButton.addEventListener('click', () => {
+        moviesController.loadMore();
     });
 }
 
@@ -730,20 +239,20 @@ if (resultsGrid) {
 
 // Favoritos
 if (favoritesButton) {
-    favoritesButton.addEventListener('click', displayFavorites);
+    favoritesButton.addEventListener('click', () => moviesController.displayFavorites());
 }
 
 if (mobileFavoritesButton) {
-    mobileFavoritesButton.addEventListener('click', displayFavorites);
+    mobileFavoritesButton.addEventListener('click', () => moviesController.displayFavorites());
 }
 
 // Historial
 if (historyButton) {
-    historyButton.addEventListener('click', displayHistory);
+    historyButton.addEventListener('click', () => moviesController.displayHistory());
 }
 
 if (mobileHistoryButton) {
-    mobileHistoryButton.addEventListener('click', displayHistory);
+    mobileHistoryButton.addEventListener('click', () => moviesController.displayHistory());
 }
 
 // Recomendaciones
@@ -790,11 +299,7 @@ if (viewRecommendedDetails) {
 if (modal) {
     modal.addEventListener('movie-state-changed', () => {
         mainLogger.debug('🔔 Evento movie-state-changed recibido');
-        updateGrid();
-        // Actualizar badges de favoritos y vistas
-        const favCount = StorageService.getFavorites().length;
-        const watchedCount = StorageService.getWatched().length;
-        updateNavigationBadges(favCount, watchedCount);
+        moviesController.updateGrid();
     });
 }
 
@@ -817,14 +322,8 @@ async function initApp() {
         mainLogger.info('🎬 Inicializando MovieFinder...');
         mainLogger.time('Inicialización completa');
 
-        // Inicializar géneros
-        await initGenres();
-
-        // Cargar películas populares
-        await loadPopularMovies();
-
-        // Actualizar badges iniciales
-        updateNavigationBadges(StorageService.getFavorites().length, StorageService.getWatchedMovies().length);
+        // Inicializar controlador
+        await moviesController.init();
 
         mainLogger.timeEnd('Inicialización completa');
         mainLogger.success('✅ MovieFinder inicializado correctamente');
@@ -838,7 +337,7 @@ async function initApp() {
 
     } catch (error) {
         mainLogger.error('❌ Error fatal al inicializar la aplicación:', error);
-        showNetworkError();
+        showEmptyMessage('⚠️ Error fatal al inicializar la aplicación');
         mainLogger.timeEnd('Inicialización completa');
     }
 }
