@@ -83,9 +83,6 @@ describe('MoviesController', () => {
         utils.resultsGrid.innerHTML = '';
 
         controller = new MoviesController();
-
-        // Inject DOM elements into controller if needed, but controller uses imports.
-        // We rely on the mocks defined at the top.
     });
 
     describe('Initialization', () => {
@@ -99,7 +96,6 @@ describe('MoviesController', () => {
 
             expect(TMDBService.loadGenres).toHaveBeenCalled();
             expect(TMDBService.getMovies).toHaveBeenCalledWith('movie/popular', 1);
-            expect(mobileNav.updateNavigationBadges).toHaveBeenCalled();
         });
     });
 
@@ -123,10 +119,9 @@ describe('MoviesController', () => {
             expect(spy).toHaveBeenCalled();
         });
 
-        it('should navigate to favorites', async () => {
-            const spy = jest.spyOn(controller, 'displayFavorites').mockImplementation();
+        it('should log warning when navigating to favorites (handled by FavoritesController)', async () => {
             await controller.navigateToSection('favorites');
-            expect(spy).toHaveBeenCalled();
+            expect(mainLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Sección desconocida'));
         });
     });
 
@@ -197,28 +192,6 @@ describe('MoviesController', () => {
             expect(TMDBService.getMovies).not.toHaveBeenCalled();
         });
     });
-
-    describe('User Lists', () => {
-        it('should display favorites', () => {
-            const favorites = [{ id: 1, title: 'Fav Movie' }];
-            StorageService.getFavorites.mockReturnValue(favorites);
-
-            controller.displayFavorites();
-
-            expect(controller.state.currentSection).toBe('favorites');
-            expect(utils.sectionTitle.textContent).toBe('Mis favoritos');
-            expect(ui.displayMovies).toHaveBeenCalledWith(favorites);
-        });
-
-        it('should show empty message if no favorites', () => {
-            StorageService.getFavorites.mockReturnValue([]);
-
-            controller.displayFavorites();
-
-            expect(utils.showEmptyMessage).toHaveBeenCalledWith(expect.stringContaining('Aún no tienes películas'));
-        });
-    });
-
 
     // Additional rigorous tests for edge cases
     describe('Init Genres Failure', () => {
@@ -306,6 +279,16 @@ describe('MoviesController', () => {
 
             expect(mockCard.querySelectorAll('.movie-status').length).toBe(2);
         });
+
+        it('should return early if currentSection is favorites or history', () => {
+            controller.state.currentSection = 'favorites';
+            controller.updateGrid();
+            expect(utils.resultsGrid.querySelectorAll).not.toHaveBeenCalled();
+
+            controller.state.currentSection = 'history';
+            controller.updateGrid();
+            expect(utils.resultsGrid.querySelectorAll).not.toHaveBeenCalled();
+        });
     });
 
     describe('Load More Filtering', () => {
@@ -352,21 +335,6 @@ describe('MoviesController', () => {
         it('should log warning for unknown section', async () => {
             await controller.navigateToSection('unknown-section');
             expect(mainLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Sección desconocida'));
-        });
-    });
-
-    describe('Update Grid Behavior', () => {
-        it('should delegate to displayFavorites when currentSection is favorites', () => {
-            const spy = jest.spyOn(controller, 'displayFavorites').mockImplementation();
-            controller.state.currentSection = 'favorites';
-            controller.updateGrid();
-            expect(spy).toHaveBeenCalled();
-        });
-        it('should delegate to displayHistory when currentSection is history', () => {
-            const spy = jest.spyOn(controller, 'displayHistory').mockImplementation();
-            controller.state.currentSection = 'history';
-            controller.updateGrid();
-            expect(spy).toHaveBeenCalled();
         });
     });
 });

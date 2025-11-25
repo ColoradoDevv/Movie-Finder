@@ -1,10 +1,10 @@
 import { TMDBService } from '../services/TMDBService.js';
-import { StorageService } from '../services/StorageService.js';
 import { FiltersService } from '../services/FiltersService.js';
 import { displayMovies } from '../ui.js';
 import { showLoader, hideLoader, clearResults, showEmptyMessage, sectionTitle, resultsGrid } from '../utils.js';
 import { mainLogger } from '../logger.js';
-import { syncNavigationState, updateNavigationBadges } from '../mobile-nav.js';
+import { syncNavigationState } from '../mobile-nav.js';
+import { StorageService } from '../services/StorageService.js';
 
 /**
  * MoviesController
@@ -46,7 +46,6 @@ export class MoviesController {
     async init() {
         await this.initGenres();
         await this.loadPopularMovies();
-        this.updateBadges();
     }
 
     /**
@@ -69,14 +68,11 @@ export class MoviesController {
             case 'upcoming':
                 await this.loadUpcomingMovies();
                 break;
-            case 'favorites':
-                this.displayFavorites();
-                break;
-            case 'history':
-                this.displayHistory();
-                break;
             default:
-                mainLogger.warn(`Sección desconocida: ${section}`);
+                // Si es una sección manejada por otro controlador (favorites, history),
+                // main.js debería haber interceptado la navegación.
+                // Pero si llegamos aquí, logueamos advertencia.
+                mainLogger.warn(`Sección desconocida o manejada por otro controlador: ${section}`);
         }
     }
 
@@ -264,54 +260,6 @@ export class MoviesController {
     }
 
     /**
-     * Muestra la lista de favoritos
-     */
-    displayFavorites() {
-        mainLogger.info('❤️ Mostrando favoritos...');
-        this.state.currentSection = 'favorites';
-        sectionTitle.textContent = 'Mis favoritos';
-        sectionTitle.classList.remove('christmas-title');
-
-        const favorites = StorageService.getFavorites();
-        clearResults();
-        if (this.dom.loadMoreButton) this.dom.loadMoreButton.style.display = 'none';
-        this.state.allMoviesCache = [];
-
-        if (favorites.length === 0) {
-            showEmptyMessage('Aún no tienes películas en favoritos');
-        } else {
-            displayMovies(favorites);
-            mainLogger.success(`✓ Mostrando ${favorites.length} favoritos`);
-        }
-
-        syncNavigationState('favorites');
-    }
-
-    /**
-     * Muestra el historial de vistas
-     */
-    displayHistory() {
-        mainLogger.info('📺 Mostrando historial...');
-        this.state.currentSection = 'history';
-        sectionTitle.textContent = 'Películas vistas';
-        sectionTitle.classList.remove('christmas-title');
-
-        const watched = StorageService.getWatchedMovies();
-        clearResults();
-        if (this.dom.loadMoreButton) this.dom.loadMoreButton.style.display = 'none';
-        this.state.allMoviesCache = [];
-
-        if (watched.length === 0) {
-            showEmptyMessage('Aún no has marcado ninguna película como vista');
-        } else {
-            displayMovies(watched);
-            mainLogger.success(`✓ Mostrando ${watched.length} películas vistas`);
-        }
-
-        syncNavigationState('history');
-    }
-
-    /**
      * Inicializa los géneros en el sidebar
      */
     async initGenres() {
@@ -375,11 +323,9 @@ export class MoviesController {
     updateGrid() {
         mainLogger.debug('🔄 Actualizando grid de películas...');
 
-        if (this.state.currentSection === 'favorites') {
-            this.displayFavorites();
-            return;
-        } else if (this.state.currentSection === 'history') {
-            this.displayHistory();
+        // Si estamos en una sección manejada por otro controlador, no hacemos nada aquí
+        // (FavoritesController manejará su propia actualización si es necesario)
+        if (this.state.currentSection === 'favorites' || this.state.currentSection === 'history') {
             return;
         }
 
@@ -415,12 +361,6 @@ export class MoviesController {
                 card.insertBefore(fragment, card.firstChild);
             }
         });
-
-        this.updateBadges();
-    }
-
-    updateBadges() {
-        updateNavigationBadges(StorageService.getFavorites().length, StorageService.getWatchedMovies().length);
     }
 
     // Métodos privados y helpers

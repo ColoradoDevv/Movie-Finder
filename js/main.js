@@ -1,53 +1,40 @@
 import { TMDBService } from './services/TMDBService.js';
 import { StorageService } from './services/StorageService.js';
-import { FiltersService } from './services/FiltersService.js';
-import { displayMovies, displayRecommendedMovie } from './ui.js';
+import { displayMovies } from './ui.js';
 import { openModal, closeModal } from './modal.js';
-import { getRandomMovie, currentRecommendedMovie, resetRecommendationHistory } from './recommendations.js';
-import { showLoader, hideLoader, clearResults, showEmptyMessage, sectionTitle, resultsGrid, modal } from './utils.js';
+import { showLoader, hideLoader, clearResults, showEmptyMessage, resultsGrid, modal } from './utils.js';
 import { mainLogger } from './logger.js';
-import { syncNavigationState, updateNavigationBadges, isMobileDevice, initializeMobileNavigation } from './mobile-nav.js';
-import { intelligentSearch, processSearchResults } from './search.js';
-import { MoviesController } from './controllers/MoviesController.js';
+import { initializeMobileNavigation } from './mobile-nav.js';
 
-// Inicializar Controlador
+import { MoviesController } from './controllers/MoviesController.js';
+import { SearchController } from './controllers/SearchController.js';
+import { FiltersController } from './controllers/FiltersController.js';
+import { FavoritesController } from './controllers/FavoritesController.js';
+import { RecommendationsController } from './controllers/RecommendationsController.js';
+
+// Inicializar Controladores
 const moviesController = new MoviesController();
+const searchController = new SearchController();
+const filtersController = new FiltersController();
+const favoritesController = new FavoritesController();
+const recommendationsController = new RecommendationsController();
 
 // Referencias a elementos del DOM
 const searchInput = document.getElementById('searchInput');
-const genreNav = document.getElementById('genre-nav');
 const homeButton = document.getElementById('home-button');
 const loadMoreButton = document.getElementById('load-more');
-const favoritesButton = document.getElementById('favorites-button');
-const historyButton = document.getElementById('history-button');
-const mobileFavoritesButton = document.getElementById('mobile-favorites-button');
-const mobileHistoryButton = document.getElementById('mobile-history-button');
-const viewRecommendedDetails = document.getElementById('view-recommended-details');
-const recommendButton = document.getElementById('recommend-button');
-const recommendationGenreSelect = document.getElementById('recommendation-genre');
-
-// Referencias a elementos de filtros
-const sortBySelect = document.getElementById('sort-by');
-const filterYearSelect = document.getElementById('filter-year');
-const filterRatingSelect = document.getElementById('filter-rating');
-const applyFiltersBtn = document.getElementById('apply-filters');
-const resetFiltersBtn = document.getElementById('reset-filters');
 
 mainLogger.info('🚀 MovieFinder iniciando...');
 
 // ============================================
-// EVENT LISTENERS DE FILTROS
+// INICIALIZACIÓN DE CONTROLADORES
 // ============================================
 
-if (applyFiltersBtn) {
-    applyFiltersBtn.addEventListener('click', () => {
-        mainLogger.info('🔍 Aplicando filtros...');
-
-        moviesController.state.currentFilters.sortBy = sortBySelect.value;
-        moviesController.state.currentFilters.year = filterYearSelect.value;
-        moviesController.state.currentFilters.rating = filterRatingSelect.value;
-
-        mainLogger.debug('Filtros aplicados:', moviesController.state.currentFilters);
+// Inicializar filtros con callbacks para actualizar la vista
+filtersController.init(
+    (filters) => { // onApply
+        moviesController.state.currentFilters = filters;
+        mainLogger.debug('Filtros aplicados:', filters);
 
         if (moviesController.state.allMoviesCache.length > 0) {
             const filteredMovies = moviesController.applyFiltersToMovies(moviesController.state.allMoviesCache);
@@ -56,17 +43,8 @@ if (applyFiltersBtn) {
             moviesController.updateResultsCount(filteredMovies.length, moviesController.state.allMoviesCache.length);
             mainLogger.success(`✓ Filtros aplicados: ${filteredMovies.length} resultados`);
         }
-    });
-}
-
-if (resetFiltersBtn) {
-    resetFiltersBtn.addEventListener('click', () => {
-        mainLogger.info('🔄 Reseteando filtros...');
-
-        sortBySelect.value = 'default';
-        filterYearSelect.value = '';
-        filterRatingSelect.value = '';
-
+    },
+    () => { // onReset
         moviesController.state.currentFilters = {
             sortBy: 'default',
             year: '',
@@ -78,10 +56,13 @@ if (resetFiltersBtn) {
             displayMovies(moviesController.state.allMoviesCache);
             moviesController.updateResultsCount(moviesController.state.allMoviesCache.length, moviesController.state.allMoviesCache.length);
         }
-
         mainLogger.success('✓ Filtros reseteados');
-    });
-}
+    }
+);
+
+// Inicializar favoritos y recomendaciones
+favoritesController.init();
+recommendationsController.init();
 
 // ============================================
 // EVENT LISTENERS
@@ -92,7 +73,7 @@ document.querySelectorAll('.sidebar-nav-item[data-section]').forEach(button => {
     button.addEventListener('click', () => {
         const section = button.dataset.section;
         if (section) {
-            moviesController.navigateToSection(section);
+            handleNavigation(section);
         }
     });
 });
@@ -102,10 +83,20 @@ document.querySelectorAll('.bottom-nav-item[data-section]').forEach(button => {
     button.addEventListener('click', () => {
         const section = button.dataset.section;
         if (section) {
-            moviesController.navigateToSection(section);
+            handleNavigation(section);
         }
     });
 });
+
+function handleNavigation(section) {
+    if (section === 'favorites') {
+        favoritesController.displayFavorites();
+    } else if (section === 'history') {
+        favoritesController.displayHistory();
+    } else {
+        moviesController.navigateToSection(section);
+    }
+}
 
 // Home button
 if (homeButton) {
@@ -131,10 +122,8 @@ if (searchInput) {
         }
 
         try {
-            mainLogger.info(`🔍 Búsqueda inteligente iniciada: "${query}"`);
-
             showLoader();
-            const results = await intelligentSearch(query, 1);
+            const results = await searchController.intelligentSearch(query, 1);
             hideLoader();
 
             if (results) {
@@ -147,7 +136,7 @@ if (searchInput) {
                 moviesController.state.allMoviesCache = results.movies || [];
 
                 // Procesar y mostrar resultados
-                await processSearchResults(results, query);
+                await searchController.processSearchResults(results, query);
 
                 // Actualizar botón de cargar más
                 moviesController._updateLoadMoreButton();
@@ -179,7 +168,8 @@ if (searchInput) {
     });
 }
 
-// Géneros
+// Géneros (delegado a MoviesController, pero necesitamos interceptar el click)
+const genreNav = document.getElementById('genre-nav');
 if (genreNav) {
     genreNav.addEventListener('click', async e => {
         const btn = e.target.closest('.genre-btn');
@@ -237,69 +227,19 @@ if (resultsGrid) {
     });
 }
 
-// Favoritos
-if (favoritesButton) {
-    favoritesButton.addEventListener('click', () => moviesController.displayFavorites());
-}
-
-if (mobileFavoritesButton) {
-    mobileFavoritesButton.addEventListener('click', () => moviesController.displayFavorites());
-}
-
-// Historial
-if (historyButton) {
-    historyButton.addEventListener('click', () => moviesController.displayHistory());
-}
-
-if (mobileHistoryButton) {
-    mobileHistoryButton.addEventListener('click', () => moviesController.displayHistory());
-}
-
-// Recomendaciones
-if (recommendButton) {
-    recommendButton.addEventListener('click', () => {
-        mainLogger.info('🎲 Botón Recomendar presionado');
-        getRandomMovie();
-    });
-}
-
-if (recommendationGenreSelect) {
-    recommendationGenreSelect.addEventListener('change', (e) => {
-        const selectedGenre = e.target.selectedOptions[0].text;
-        mainLogger.info(`🔄 Género de recomendación cambiado a: ${selectedGenre}`);
-        resetRecommendationHistory();
-    });
-}
-
-if (viewRecommendedDetails) {
-    viewRecommendedDetails.addEventListener('click', async () => {
-        if (!currentRecommendedMovie) {
-            mainLogger.warn('⚠️ No hay película recomendada para mostrar');
-            return;
-        }
-
-        try {
-            mainLogger.info('📖 Abriendo detalles de recomendación');
-
-            showLoader();
-            const data = await TMDBService.getMovieDetails(currentRecommendedMovie.id);
-            hideLoader();
-
-            if (data) {
-                openModal(data);
-            }
-        } catch (error) {
-            hideLoader();
-            mainLogger.error('Error al cargar detalles de recomendación:', error);
-        }
-    });
-}
-
 // Modal
 if (modal) {
     modal.addEventListener('movie-state-changed', () => {
         mainLogger.debug('🔔 Evento movie-state-changed recibido');
         moviesController.updateGrid();
+        favoritesController.updateBadges();
+
+        // Si estamos en favoritos o historial, recargar la vista
+        if (moviesController.state.currentSection === 'favorites') {
+            favoritesController.displayFavorites();
+        } else if (moviesController.state.currentSection === 'history') {
+            favoritesController.displayHistory();
+        }
     });
 }
 
@@ -322,7 +262,7 @@ async function initApp() {
         mainLogger.info('🎬 Inicializando MovieFinder...');
         mainLogger.time('Inicialización completa');
 
-        // Inicializar controlador
+        // Inicializar controlador principal
         await moviesController.init();
 
         mainLogger.timeEnd('Inicialización completa');
