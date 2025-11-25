@@ -365,7 +365,7 @@ export class MoviesController {
             mainLogger.timeEnd('Carga de géneros');
             mainLogger.success(`✓ ${data.genres.length + 1} géneros cargados`);
         } catch (error) {
-            mainLogger.error('Error al inicializar géneros:', error);
+            mainLogger.error(`Error al inicializar géneros: ${error}`);
         }
     }
 

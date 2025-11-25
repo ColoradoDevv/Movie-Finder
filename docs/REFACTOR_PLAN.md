@@ -2,12 +2,12 @@
 
 ## 📊 Estado General del Proyecto
 
-**Progreso Total: ~35%** (2 de 6 refactors completados)
+**Progreso Total: ~50%** (3 de 6 refactors completados)
 
 ```
 ✅ Refactor #1: Core Modules        [COMPLETADO - 100%]
 ✅ Refactor #2: Services             [COMPLETADO - 100%]
-⏳ Refactor #3: Movies Controller    [PENDIENTE - 0%]
+✅ Refactor #3: Movies Controller    [COMPLETADO - 100%]
 ⏳ Refactor #4: Controllers          [PENDIENTE - 0%]
 ⏳ Refactor #5: UI Components        [PENDIENTE - 0%]
 ⏳ Refactor #6: Final Integration    [PENDIENTE - 0%]
@@ -79,28 +79,28 @@
 
 ---
 
-## 🔄 Refactor #3: Movies Controller - PENDIENTE
+## ✅ Refactor #3: Movies Controller - COMPLETADO
 
 **Branch:** `refactor/03-movies-controller`  
-**Duración estimada:** 4-5 horas  
-**Estado:** ⏳ **PENDIENTE**
+**Duración:** 4-5 horas  
+**Estado:** ✅ **COMPLETADO**
 
-- [ ] Crear `MoviesController.js`
-- [ ] Extraer lógica de navegación (navigateToSection)
-- [ ] Extraer carga de secciones (Popular, Top Rated, Upcoming, Christmas)
-- [ ] Extraer gestión de géneros (initGenres)
-- [ ] Extraer lógica de "Cargar más"
-- [ ] Extraer displayFavorites y displayHistory
-- [ ] Implementar updateGrid
-- [ ] Tests unitarios
+- [x] Crear `MoviesController.js`
+- [x] Extraer lógica de navegación (navigateToSection)
+- [x] Extraer carga de secciones (Popular, Top Rated, Upcoming, Christmas)
+- [x] Extraer gestión de géneros (initGenres)
+- [x] Extraer lógica de "Cargar más"
+- [x] Extraer displayFavorites y displayHistory
+- [x] Implementar updateGrid
+- [x] Tests unitarios
 
 **Archivos afectados:**
-- `js/controllers/MoviesController.js` (nuevo)
-- `js/main.js` (reducir ~400-500 líneas)
+- `js/controllers/MoviesController.js`
+- `js/main.js` (reducido)
 
-**Funcionalidad a migrar desde main.js:**
+**Funcionalidad migrada:**
 - Líneas 72-174: Navegación y carga de secciones
-- Líneas 315-349: Inicialización de géneros  
+- Líneas 315-349: Inicialización de géneros
 - Líneas 419-461: Display de favoritos e historial
 - Líneas 695-732: Lógica de "Cargar más"
 - Líneas 283-313: updateGrid()
