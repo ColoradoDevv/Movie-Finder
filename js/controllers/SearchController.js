@@ -1,11 +1,17 @@
 import { TMDBService } from '../services/TMDBService.js';
-import { displayMovies } from '../ui.js';
-import { clearResults, showEmptyMessage, sectionTitle } from '../utils.js';
+import { MoviesView } from '../ui/views/MoviesView.js';
+import { EmptyStateView } from '../ui/views/EmptyStateView.js';
+import { clearResults, sectionTitle, resultsGrid } from '../utils.js';
 import Logger from '../logger.js';
 
 export class SearchController {
     constructor() {
         this.logger = new Logger('SEARCH_CONTROLLER');
+
+        // Inicializar vistas
+        this.moviesView = new MoviesView(resultsGrid);
+        this.emptyStateView = new EmptyStateView(resultsGrid);
+
         this.logger.info('🔍 SearchController inicializado');
     }
 
@@ -96,7 +102,7 @@ export class SearchController {
     async processSearchResults(searchResults, query) {
         if (!searchResults) {
             this.logger.warn('No hay resultados para procesar');
-            showEmptyMessage(`No se encontraron resultados para "${query}"`);
+            this.emptyStateView.show(`No se encontraron resultados para "${query}"`);
             return;
         }
 
@@ -110,7 +116,7 @@ export class SearchController {
                 this.logger.debug('Mostrando solo películas');
                 sectionTitle.textContent = `Películas: "${query}"`;
                 clearResults();
-                displayMovies(movies);
+                this.moviesView.render(movies);
                 break;
 
             case 'person':
@@ -127,7 +133,7 @@ export class SearchController {
 
             default:
                 this.logger.warn('Tipo de búsqueda desconocido');
-                showEmptyMessage(`No se encontraron resultados para "${query}"`);
+                this.emptyStateView.show(`No se encontraron resultados para "${query}"`);
         }
     }
 
@@ -140,7 +146,7 @@ export class SearchController {
         this.logger.info(`👤 Manejando búsqueda de persona: ${people.length} resultados`);
 
         if (people.length === 0) {
-            showEmptyMessage(`No se encontraron actores o directores con el nombre "${query}"`);
+            this.emptyStateView.show(`No se encontraron actores o directores con el nombre "${query}"`);
             return;
         }
 
@@ -162,7 +168,7 @@ export class SearchController {
         const credits = await TMDBService.getMoviesByPerson(topPerson.id);
 
         if (!credits) {
-            showEmptyMessage(`No se pudieron cargar las películas de ${topPerson.name}`);
+            this.emptyStateView.show(`No se pudieron cargar las películas de ${topPerson.name}`);
             return;
         }
 
@@ -189,13 +195,13 @@ export class SearchController {
         this.logger.success(`✓ ${uniqueMovies.length} películas únicas encontradas`);
 
         if (uniqueMovies.length === 0) {
-            showEmptyMessage(`${topPerson.name} no tiene películas registradas en TMDB`);
+            this.emptyStateView.show(`${topPerson.name} no tiene películas registradas en TMDB`);
             return;
         }
 
         // Mostrar las películas
         clearResults();
-        displayMovies(uniqueMovies.slice(0, 60)); // Limitar a 60 para rendimiento
+        this.moviesView.render(uniqueMovies.slice(0, 60)); // Limitar a 60 para rendimiento
 
         // Mostrar información adicional si hay más personas
         if (people.length > 1) {
@@ -222,7 +228,7 @@ export class SearchController {
         `;
 
         clearResults();
-        displayMovies(movies);
+        this.moviesView.render(movies);
 
         // Agregar sugerencias de personas al final
         if (people.length > 0) {
@@ -281,7 +287,7 @@ export class SearchController {
 
                     sectionTitle.textContent = `Películas de ${personName}`;
                     clearResults();
-                    displayMovies(uniqueMovies.slice(0, 60));
+                    this.moviesView.render(uniqueMovies.slice(0, 60));
                 }
             });
         });

@@ -1,6 +1,7 @@
 import { StorageService } from '../services/StorageService.js';
-import { displayMovies } from '../ui.js';
-import { clearResults, showEmptyMessage, sectionTitle } from '../utils.js';
+import { MoviesView } from '../ui/views/MoviesView.js';
+import { EmptyStateView } from '../ui/views/EmptyStateView.js';
+import { clearResults, sectionTitle, resultsGrid } from '../utils.js';
 import Logger from '../logger.js';
 import { syncNavigationState, updateNavigationBadges } from '../mobile-nav.js';
 
@@ -14,6 +15,11 @@ export class FavoritesController {
             mobileFavoritesButton: document.getElementById('mobile-favorites-button'),
             mobileHistoryButton: document.getElementById('mobile-history-button')
         };
+
+        // Inicializar vistas
+        this.moviesView = new MoviesView(resultsGrid);
+        this.emptyStateView = new EmptyStateView(resultsGrid);
+
         this.logger.info('❤️ FavoritesController inicializado');
     }
 
@@ -59,9 +65,9 @@ export class FavoritesController {
         const favorites = StorageService.getFavorites();
 
         if (favorites.length === 0) {
-            showEmptyMessage('Aún no tienes películas en favoritos');
+            this.emptyStateView.show('Aún no tienes películas en favoritos');
         } else {
-            displayMovies(favorites);
+            this.moviesView.render(favorites);
             this.logger.success(`✓ Mostrando ${favorites.length} favoritos`);
         }
 
@@ -87,9 +93,9 @@ export class FavoritesController {
         const watched = StorageService.getWatchedMovies();
 
         if (watched.length === 0) {
-            showEmptyMessage('Aún no has marcado ninguna película como vista');
+            this.emptyStateView.show('Aún no has marcado ninguna película como vista');
         } else {
-            displayMovies(watched);
+            this.moviesView.render(watched);
             this.logger.success(`✓ Mostrando ${watched.length} películas vistas`);
         }
 

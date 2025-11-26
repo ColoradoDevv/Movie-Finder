@@ -1,6 +1,7 @@
 import { SearchController } from '../../js/controllers/SearchController.js';
 import { TMDBService } from '../../js/services/TMDBService.js';
-import * as ui from '../../js/ui.js';
+import { MoviesView } from '../../js/ui/views/MoviesView.js';
+import { EmptyStateView } from '../../js/ui/views/EmptyStateView.js';
 import * as utils from '../../js/utils.js';
 
 // Mock dependencies
@@ -10,34 +11,42 @@ jest.mock('../../js/services/TMDBService.js', () => ({
         getMoviesByPerson: jest.fn()
     }
 }));
-jest.mock('../../js/ui.js', () => ({
-    displayMovies: jest.fn()
-}));
+
+jest.mock('../../js/ui/views/MoviesView.js');
+jest.mock('../../js/ui/views/EmptyStateView.js');
+
 jest.mock('../../js/utils.js', () => ({
     clearResults: jest.fn(),
-    showEmptyMessage: jest.fn(),
-    sectionTitle: { textContent: '', innerHTML: '' }
+    sectionTitle: { textContent: '', innerHTML: '' },
+    resultsGrid: { querySelectorAll: jest.fn().mockReturnValue([]) }
 }));
-jest.mock('../../js/logger.js', () => {
-    return function () {
-        return {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            success: jest.fn(),
-            debug: jest.fn(),
-            time: jest.fn(),
-            timeEnd: jest.fn()
-        };
-    };
-});
+
+jest.mock('../../js/logger.js');
 
 describe('SearchController', () => {
     let controller;
+    let mockMoviesView;
+    let mockEmptyStateView;
 
     beforeEach(() => {
         jest.clearAllMocks();
         document.body.innerHTML = '<div id="results-grid"></div>';
+
+        // Setup mocks for views
+        mockMoviesView = {
+            render: jest.fn(),
+            clear: jest.fn(),
+            append: jest.fn()
+        };
+        mockEmptyStateView = {
+            show: jest.fn(),
+            hide: jest.fn(),
+            clear: jest.fn()
+        };
+
+        MoviesView.mockImplementation(() => mockMoviesView);
+        EmptyStateView.mockImplementation(() => mockEmptyStateView);
+
         controller = new SearchController();
     });
 
@@ -99,8 +108,7 @@ describe('SearchController', () => {
 
             await controller.processSearchResults(results, 'query');
 
-            expect(utils.clearResults).toHaveBeenCalled();
-            expect(ui.displayMovies).toHaveBeenCalledWith(results.movies);
+            expect(mockMoviesView.render).toHaveBeenCalledWith(results.movies);
             expect(utils.sectionTitle.textContent).toContain('Películas');
         });
 
@@ -117,8 +125,7 @@ describe('SearchController', () => {
 
             await controller.processSearchResults(results, 'query');
 
-            expect(utils.clearResults).toHaveBeenCalled();
-            expect(ui.displayMovies).toHaveBeenCalled();
+            expect(mockMoviesView.render).toHaveBeenCalled();
             expect(utils.sectionTitle.innerHTML).toContain('Actor 1');
         });
 
@@ -131,7 +138,7 @@ describe('SearchController', () => {
 
             await controller.processSearchResults(results, 'query');
 
-            expect(ui.displayMovies).toHaveBeenCalledWith(results.movies);
+            expect(mockMoviesView.render).toHaveBeenCalledWith(results.movies);
             // Verify suggestions are added
             const grid = document.getElementById('results-grid');
             expect(grid.innerHTML).toContain('person-suggestions');

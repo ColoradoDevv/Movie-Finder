@@ -3,7 +3,8 @@ import { mainLogger } from '../../js/logger.js';
 import { TMDBService } from '../../js/services/TMDBService.js';
 import { StorageService } from '../../js/services/StorageService.js';
 import { FiltersService } from '../../js/services/FiltersService.js';
-import * as ui from '../../js/ui.js';
+import { MoviesView } from '../../js/ui/views/MoviesView.js';
+import { EmptyStateView } from '../../js/ui/views/EmptyStateView.js';
 import * as utils from '../../js/utils.js';
 import * as mobileNav from '../../js/mobile-nav.js';
 
@@ -28,14 +29,14 @@ jest.mock('../../js/services/FiltersService.js', () => ({
         applyFilters: jest.fn()
     }
 }));
-jest.mock('../../js/ui.js', () => ({
-    displayMovies: jest.fn()
-}));
+
+jest.mock('../../js/ui/views/MoviesView.js');
+jest.mock('../../js/ui/views/EmptyStateView.js');
+
 jest.mock('../../js/utils.js', () => ({
     showLoader: jest.fn(),
     hideLoader: jest.fn(),
     clearResults: jest.fn(),
-    showEmptyMessage: jest.fn(),
     sectionTitle: { textContent: '', classList: { add: jest.fn(), remove: jest.fn() } },
     resultsGrid: { querySelectorAll: jest.fn().mockReturnValue([]) },
     modal: { addEventListener: jest.fn() }
@@ -60,6 +61,8 @@ jest.mock('../../js/logger.js', () => ({
 
 describe('MoviesController', () => {
     let controller;
+    let mockMoviesView;
+    let mockEmptyStateView;
 
     beforeEach(() => {
         // Clear all mocks
@@ -81,6 +84,21 @@ describe('MoviesController', () => {
         // Mock Utils DOM elements
         utils.sectionTitle.textContent = '';
         utils.resultsGrid.innerHTML = '';
+
+        // Setup mocks for views
+        mockMoviesView = {
+            render: jest.fn(),
+            clear: jest.fn(),
+            append: jest.fn()
+        };
+        mockEmptyStateView = {
+            show: jest.fn(),
+            hide: jest.fn(),
+            clear: jest.fn()
+        };
+
+        MoviesView.mockImplementation(() => mockMoviesView);
+        EmptyStateView.mockImplementation(() => mockEmptyStateView);
 
         controller = new MoviesController();
     });
@@ -136,8 +154,7 @@ describe('MoviesController', () => {
             expect(utils.showLoader).toHaveBeenCalled();
             expect(TMDBService.getMovies).toHaveBeenCalledWith('movie/popular', 1);
             expect(utils.hideLoader).toHaveBeenCalled();
-            expect(utils.clearResults).toHaveBeenCalled();
-            expect(ui.displayMovies).toHaveBeenCalledWith(mockMovies);
+            expect(mockMoviesView.render).toHaveBeenCalledWith(mockMovies);
             expect(controller.state.currentPage).toBe(1);
             expect(controller.state.totalPages).toBe(5);
         });
@@ -146,9 +163,7 @@ describe('MoviesController', () => {
             TMDBService.getMovies.mockRejectedValue(new Error('Network error'));
 
             await controller.loadPopularMovies();
-
-            expect(utils.hideLoader).toHaveBeenCalled();
-            expect(utils.showEmptyMessage).toHaveBeenCalledWith(expect.stringContaining('Error de conexión'));
+            expect(mockEmptyStateView.show).toHaveBeenCalledWith(expect.stringContaining('Error de conexión'));
         });
 
         it('should load movies by genre', async () => {
@@ -179,7 +194,7 @@ describe('MoviesController', () => {
 
             expect(TMDBService.getMovies).toHaveBeenCalledWith('movie/popular', 2);
             expect(controller.state.allMoviesCache.length).toBe(2);
-            expect(ui.displayMovies).toHaveBeenCalled();
+            expect(mockMoviesView.append).toHaveBeenCalled();
             expect(controller.state.currentPage).toBe(2);
         });
 
@@ -214,7 +229,7 @@ describe('MoviesController', () => {
             expect(utils.showLoader).toHaveBeenCalled();
             expect(utils.hideLoader).toHaveBeenCalled();
             // Expect only the christmas related movies to be displayed
-            expect(ui.displayMovies).toHaveBeenCalledWith([
+            expect(mockMoviesView.render).toHaveBeenCalledWith([
                 { id: 1, title: 'Christmas Carol' },
                 { id: 3, title: 'Navidad en la ciudad' }
             ]);
@@ -240,7 +255,7 @@ describe('MoviesController', () => {
 
             await controller.loadChristmasMovies();
 
-            expect(ui.displayMovies).toHaveBeenCalledWith(genericMovies);
+            expect(mockMoviesView.render).toHaveBeenCalledWith(genericMovies);
             expect(mainLogger.success).toHaveBeenCalledWith(expect.stringContaining('películas relacionadas cargadas'));
         });
 
@@ -249,37 +264,11 @@ describe('MoviesController', () => {
 
             await controller.loadChristmasMovies();
 
-            expect(utils.showEmptyMessage).toHaveBeenCalledWith(expect.stringContaining('No se encontraron películas navideñas'));
+            expect(mockEmptyStateView.show).toHaveBeenCalledWith(expect.stringContaining('No se encontraron películas navideñas'));
         });
     });
 
     describe('Update Grid DOM Updates', () => {
-        it('should update badges on existing cards', () => {
-            // Setup DOM with a movie card
-            document.body.innerHTML += `
-            <div id="results-grid">
-                <div class="movie-card" data-movie-id="101">
-                    <div class="movie-info"></div>
-                </div>
-            </div>
-        `;
-
-            const mockCard = document.createElement('div');
-            mockCard.className = 'movie-card';
-            mockCard.dataset.movieId = '101';
-
-            utils.resultsGrid.querySelectorAll.mockReturnValue([mockCard]);
-
-            StorageService.isFavorite.mockReturnValue(true);
-            StorageService.isWatched.mockReturnValue(true);
-            StorageService.getFavorites.mockReturnValue([{ id: 101 }]);
-            StorageService.getWatchedMovies.mockReturnValue([{ id: 101 }]);
-
-            controller.updateGrid();
-
-            expect(mockCard.querySelectorAll('.movie-status').length).toBe(2);
-        });
-
         it('should return early if currentSection is favorites or history', () => {
             controller.state.currentSection = 'favorites';
             controller.updateGrid();

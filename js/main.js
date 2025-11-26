@@ -1,8 +1,9 @@
 import { TMDBService } from './services/TMDBService.js';
 import { StorageService } from './services/StorageService.js';
-import { displayMovies } from './ui.js';
-import { openModal, closeModal } from './modal.js';
-import { showLoader, hideLoader, clearResults, showEmptyMessage, resultsGrid, modal } from './utils.js';
+import { MoviesView } from './ui/views/MoviesView.js';
+import { EmptyStateView } from './ui/views/EmptyStateView.js';
+import { ModalView } from './ui/views/ModalView.js';
+import { showLoader, hideLoader, clearResults, resultsGrid, modal } from './utils.js';
 import { mainLogger } from './logger.js';
 import { initializeMobileNavigation } from './mobile-nav.js';
 
@@ -18,6 +19,11 @@ const searchController = new SearchController();
 const filtersController = new FiltersController();
 const favoritesController = new FavoritesController();
 const recommendationsController = new RecommendationsController();
+
+// Inicializar vistas globales
+const modalView = new ModalView();
+const moviesView = new MoviesView(resultsGrid);
+const emptyStateView = new EmptyStateView(resultsGrid);
 
 // Referencias a elementos del DOM
 const searchInput = document.getElementById('searchInput');
@@ -39,7 +45,7 @@ filtersController.init(
         if (moviesController.state.allMoviesCache.length > 0) {
             const filteredMovies = moviesController.applyFiltersToMovies(moviesController.state.allMoviesCache);
             clearResults();
-            displayMovies(filteredMovies);
+            moviesView.render(filteredMovies);
             moviesController.updateResultsCount(filteredMovies.length, moviesController.state.allMoviesCache.length);
             mainLogger.success(`✓ Filtros aplicados: ${filteredMovies.length} resultados`);
         }
@@ -53,7 +59,7 @@ filtersController.init(
 
         if (moviesController.state.allMoviesCache.length > 0) {
             clearResults();
-            displayMovies(moviesController.state.allMoviesCache);
+            moviesView.render(moviesController.state.allMoviesCache);
             moviesController.updateResultsCount(moviesController.state.allMoviesCache.length, moviesController.state.allMoviesCache.length);
         }
         mainLogger.success('✓ Filtros reseteados');
@@ -149,7 +155,7 @@ if (searchInput) {
         } catch (error) {
             hideLoader();
             mainLogger.error('Error en búsqueda:', error);
-            showEmptyMessage('⚠️ Error de conexión. Por favor verifica tu conexión a Internet e intenta de nuevo.');
+            emptyStateView.show('⚠️ Error de conexión. Por favor verifica tu conexión a Internet e intenta de nuevo.');
         }
     };
 
@@ -215,7 +221,7 @@ if (resultsGrid) {
             hideLoader();
 
             if (data) {
-                openModal(data);
+                modalView.showMovieDetails(data);
             } else {
                 alert('No se pudieron cargar los detalles de la película');
             }
@@ -246,7 +252,7 @@ if (modal) {
 // Cerrar modal con tecla Escape
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
-        closeModal();
+        modalView.close();
     }
 });
 
@@ -277,7 +283,7 @@ async function initApp() {
 
     } catch (error) {
         mainLogger.error('❌ Error fatal al inicializar la aplicación:', error);
-        showEmptyMessage('⚠️ Error fatal al inicializar la aplicación');
+        emptyStateView.show('⚠️ Error fatal al inicializar la aplicación');
         mainLogger.timeEnd('Inicialización completa');
     }
 }

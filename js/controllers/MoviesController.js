@@ -1,7 +1,8 @@
 import { TMDBService } from '../services/TMDBService.js';
 import { FiltersService } from '../services/FiltersService.js';
-import { displayMovies } from '../ui.js';
-import { showLoader, hideLoader, clearResults, showEmptyMessage, sectionTitle, resultsGrid } from '../utils.js';
+import { MoviesView } from '../ui/views/MoviesView.js';
+import { EmptyStateView } from '../ui/views/EmptyStateView.js';
+import { showLoader, hideLoader, clearResults, sectionTitle, resultsGrid } from '../utils.js';
 import { mainLogger } from '../logger.js';
 import { syncNavigationState } from '../mobile-nav.js';
 import { StorageService } from '../services/StorageService.js';
@@ -36,6 +37,10 @@ export class MoviesController {
             searchInput: document.getElementById('searchInput'),
             resultsCount: document.getElementById('results-count')
         };
+
+        // Inicializar vistas
+        this.moviesView = new MoviesView(resultsGrid);
+        this.emptyStateView = new EmptyStateView(resultsGrid);
 
         mainLogger.info('🎬 MoviesController inicializado');
     }
@@ -156,21 +161,21 @@ export class MoviesController {
 
                 if (christmasMovies.length > 0) {
                     this.state.allMoviesCache = [...christmasMovies];
-                    displayMovies(christmasMovies);
+                    this.moviesView.render(christmasMovies);
                     this.state.currentPage = 1;
                     this.state.totalPages = data.total_pages;
                     this._updateLoadMoreButton();
                     mainLogger.success(`✓ ${christmasMovies.length} películas navideñas cargadas`);
                 } else {
                     this.state.allMoviesCache = [...data.results];
-                    displayMovies(data.results);
+                    this.moviesView.render(data.results);
                     this.state.currentPage = 1;
                     this.state.totalPages = data.total_pages;
                     this._updateLoadMoreButton();
                     mainLogger.success(`✓ ${data.results.length} películas relacionadas cargadas`);
                 }
             } else {
-                showEmptyMessage('No se encontraron películas navideñas. Intenta más tarde.');
+                this.emptyStateView.show('No se encontraron películas navideñas. Intenta más tarde.');
             }
         } catch (error) {
             hideLoader();
@@ -201,7 +206,7 @@ export class MoviesController {
             if (data) {
                 clearResults();
                 this.state.allMoviesCache = [...data.results];
-                displayMovies(data.results);
+                this.moviesView.render(data.results);
                 this.state.currentPage = 1;
                 this.state.totalPages = data.total_pages;
                 this._updateLoadMoreButton();
@@ -238,7 +243,7 @@ export class MoviesController {
                 const filteredNewMovies = this.applyFiltersToMovies(newMovies);
 
                 // Mostrar solo las nuevas películas filtradas
-                displayMovies(filteredNewMovies);
+                this.moviesView.append(filteredNewMovies);
 
                 // Actualizar contador con todas las películas filtradas
                 const allFilteredMovies = this.applyFiltersToMovies(this.state.allMoviesCache);
@@ -388,7 +393,7 @@ export class MoviesController {
                 clearResults();
                 this.state.allMoviesCache = [...data.results];
                 const filteredMovies = this.applyFiltersToMovies(this.state.allMoviesCache);
-                displayMovies(filteredMovies);
+                this.moviesView.render(filteredMovies);
                 this.updateResultsCount(filteredMovies.length, this.state.allMoviesCache.length);
 
                 this.state.currentPage = 1;
@@ -397,7 +402,7 @@ export class MoviesController {
 
                 mainLogger.success(`✓ ${title} cargadas (Página 1/${this.state.totalPages})`);
             } else {
-                showEmptyMessage(`No se pudieron cargar ${title.toLowerCase()}`);
+                this.emptyStateView.show(`No se pudieron cargar ${title.toLowerCase()}`);
                 this.updateResultsCount(0, 0);
             }
         } catch (error) {
@@ -434,6 +439,6 @@ export class MoviesController {
     }
 
     _showNetworkError() {
-        showEmptyMessage('⚠️ Error de conexión. Por favor verifica tu conexión a Internet e intenta de nuevo.');
+        this.emptyStateView.show('⚠️ Error de conexión. Por favor verifica tu conexión a Internet e intenta de nuevo.');
     }
 }

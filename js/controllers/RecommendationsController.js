@@ -1,8 +1,8 @@
 import { TMDBService } from '../services/TMDBService.js';
-import { displayRecommendedMovie } from '../ui.js';
+import { Recommendation } from '../ui/components/Recommendation.js';
+import { ModalView } from '../ui/views/ModalView.js';
 import { showLoader, hideLoader } from '../utils.js';
 import Logger from '../logger.js';
-import { openModal } from '../modal.js';
 
 export class RecommendationsController {
     constructor() {
@@ -15,6 +15,11 @@ export class RecommendationsController {
         this.currentRecommendedMovie = null;
         this.STORAGE_KEY = 'moviefinder_recommendation_history';
         this.MAX_HISTORY = 50;
+
+        // Inicializar componentes
+        const recommendedContainer = document.getElementById('recommended-movie');
+        this.recommendationComponent = new Recommendation(recommendedContainer);
+        this.modalView = new ModalView();
 
         this.logger.info('🎲 RecommendationsController inicializado');
     }
@@ -55,7 +60,7 @@ export class RecommendationsController {
                     hideLoader();
 
                     if (data) {
-                        openModal(data);
+                        this.modalView.showMovieDetails(data);
                     }
                 } catch (error) {
                     hideLoader();
@@ -152,7 +157,7 @@ export class RecommendationsController {
         this._saveHistory();
         this.logger.info(`📝 Historial actualizado y guardado: ${this.history.length}/${this.MAX_HISTORY}`);
 
-        displayRecommendedMovie(this.currentRecommendedMovie);
+        this.recommendationComponent.render(this.currentRecommendedMovie);
     }
 
     resetHistory() {

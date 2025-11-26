@@ -1,8 +1,8 @@
 import { RecommendationsController } from '../../js/controllers/RecommendationsController.js';
 import { TMDBService } from '../../js/services/TMDBService.js';
-import * as ui from '../../js/ui.js';
+import { Recommendation } from '../../js/ui/components/Recommendation.js';
+import { ModalView } from '../../js/ui/views/ModalView.js';
 import * as utils from '../../js/utils.js';
-import * as modal from '../../js/modal.js';
 
 // Mock dependencies
 jest.mock('../../js/services/TMDBService.js', () => ({
@@ -11,30 +11,21 @@ jest.mock('../../js/services/TMDBService.js', () => ({
         getMovieDetails: jest.fn()
     }
 }));
-jest.mock('../../js/ui.js', () => ({
-    displayRecommendedMovie: jest.fn()
-}));
+
+jest.mock('../../js/ui/components/Recommendation.js');
+jest.mock('../../js/ui/views/ModalView.js');
+
 jest.mock('../../js/utils.js', () => ({
     showLoader: jest.fn(),
     hideLoader: jest.fn()
 }));
-jest.mock('../../js/modal.js', () => ({
-    openModal: jest.fn()
-}));
-jest.mock('../../js/logger.js', () => {
-    return function () {
-        return {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            success: jest.fn(),
-            debug: jest.fn()
-        };
-    };
-});
+
+jest.mock('../../js/logger.js');
 
 describe('RecommendationsController', () => {
     let controller;
+    let mockRecommendation;
+    let mockModalView;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -47,7 +38,22 @@ describe('RecommendationsController', () => {
                 <option value="28">Action</option>
             </select>
             <button id="view-recommended-details"></button>
+            <div id="recommended-movie-container"></div>
+            <div id="movie-modal"></div>
         `;
+
+        // Setup mocks for views
+        mockRecommendation = {
+            render: jest.fn(),
+            show: jest.fn(),
+            hide: jest.fn()
+        };
+        mockModalView = {
+            showMovieDetails: jest.fn()
+        };
+
+        Recommendation.mockImplementation(() => mockRecommendation);
+        ModalView.mockImplementation(() => mockModalView);
 
         controller = new RecommendationsController();
         controller.init();
@@ -66,7 +72,7 @@ describe('RecommendationsController', () => {
             expect(utils.showLoader).toHaveBeenCalled();
             expect(TMDBService.fetchFromAPI).toHaveBeenCalled();
             expect(utils.hideLoader).toHaveBeenCalled();
-            expect(ui.displayRecommendedMovie).toHaveBeenCalled();
+            expect(mockRecommendation.render).toHaveBeenCalled();
             expect(controller.history).toContain(controller.currentRecommendedMovie.id);
         });
 
@@ -108,7 +114,7 @@ describe('RecommendationsController', () => {
             await new Promise(resolve => setTimeout(resolve, 0));
 
             expect(TMDBService.getMovieDetails).toHaveBeenCalledWith(1);
-            expect(modal.openModal).toHaveBeenCalled();
+            expect(mockModalView.showMovieDetails).toHaveBeenCalled();
         });
 
         it('should not open modal if no current movie', () => {
