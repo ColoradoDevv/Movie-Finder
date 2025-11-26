@@ -5,15 +5,15 @@ import { showLoader, hideLoader } from '../utils.js';
 import Logger from '../logger.js';
 
 export class RecommendationsController {
-    constructor() {
+    constructor(state) {
+        this.state = state;
         this.logger = new Logger('RECOMMENDATIONS_CONTROLLER');
         this.dom = {
             recommendButton: document.getElementById('recommend-button'),
             recommendationGenreSelect: document.getElementById('recommendation-genre'),
             viewRecommendedDetails: document.getElementById('view-recommended-details')
         };
-        this.currentRecommendedMovie = null;
-        this.STORAGE_KEY = 'moviefinder_recommendation_history';
+
         this.MAX_HISTORY = 50;
 
         // Inicializar componentes
@@ -21,12 +21,12 @@ export class RecommendationsController {
         this.recommendationComponent = new Recommendation(recommendedContainer);
         this.modalView = new ModalView();
 
-        this.logger.info('🎲 RecommendationsController inicializado');
+        this.logger.info('🎲 RecommendationsController inicializado con State centralizado');
     }
 
     init() {
         this._setupEventListeners();
-        this._loadHistory();
+        // El historial ya se carga en StateStorageSync
     }
 
     _setupEventListeners() {
@@ -40,14 +40,19 @@ export class RecommendationsController {
         if (this.dom.recommendationGenreSelect) {
             this.dom.recommendationGenreSelect.addEventListener('change', (e) => {
                 const selectedGenre = e.target.selectedOptions[0].text;
+                const genreId = e.target.value;
                 this.logger.info(`🔄 Género de recomendación cambiado a: ${selectedGenre}`);
+
+                this.state.set('recommendations.genre', genreId);
                 this.resetHistory();
             });
         }
 
         if (this.dom.viewRecommendedDetails) {
             this.dom.viewRecommendedDetails.addEventListener('click', async () => {
-                if (!this.currentRecommendedMovie) {
+                const currentMovie = this.state.get('recommendations.currentMovie');
+
+                if (!currentMovie) {
                     this.logger.warn('⚠️ No hay película recomendada para mostrar');
                     return;
                 }
@@ -56,7 +61,7 @@ export class RecommendationsController {
                     this.logger.info('📖 Abriendo detalles de recomendación');
 
                     showLoader();
-                    const data = await TMDBService.getMovieDetails(this.currentRecommendedMovie.id);
+                    const data = await TMDBService.getMovieDetails(currentMovie.id);
                     hideLoader();
 
                     if (data) {
@@ -67,25 +72,6 @@ export class RecommendationsController {
                     this.logger.error('Error al cargar detalles de recomendación:', error);
                 }
             });
-        }
-    }
-
-    _loadHistory() {
-        try {
-            this.history = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '[]');
-            this.logger.debug(`📖 Historial cargado: ${this.history.length} películas`);
-        } catch (error) {
-            this.logger.error('Error al cargar historial:', error);
-            this.history = [];
-        }
-    }
-
-    _saveHistory() {
-        try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.history));
-            this.logger.debug(`💾 Historial guardado: ${this.history.length} películas`);
-        } catch (error) {
-            this.logger.error('Error al guardar historial:', error);
         }
     }
 
@@ -118,52 +104,59 @@ export class RecommendationsController {
         this.logger.info(`📊 ${data.results.length} candidatos disponibles`);
 
         // Filtrar películas que ya fueron recomendadas recientemente
+        const history = this.state.get('recommendations.history') || [];
         const availableMovies = data.results.filter(
-            movie => !this.history.includes(movie.id)
+            movie => !history.includes(movie.id)
         );
 
         const moviesToChooseFrom = availableMovies.length > 0 ? availableMovies : data.results;
 
         if (availableMovies.length === 0) {
             this.logger.warn('⚠️ Todas las películas ya fueron mostradas, limpiando historial');
-            this.history = [];
-            this._saveHistory();
+            this.state.set('recommendations.history', []);
+            // StateStorageSync guardará el cambio
         } else {
             this.logger.debug(`${availableMovies.length} películas no vistas disponibles`);
         }
 
         // Seleccionar película aleatoria
         const randomIndex = Math.floor(Math.random() * moviesToChooseFrom.length);
-        this.currentRecommendedMovie = moviesToChooseFrom[randomIndex];
+        const selectedMovie = moviesToChooseFrom[randomIndex];
 
-        this.logger.success(`✓ Película seleccionada: "${this.currentRecommendedMovie.title}"`);
+        this.state.set('recommendations.currentMovie', selectedMovie);
+
+        this.logger.success(`✓ Película seleccionada: "${selectedMovie.title}"`);
         this.logger.debug('Detalles de la recomendación:', {
-            id: this.currentRecommendedMovie.id,
-            título: this.currentRecommendedMovie.title,
-            puntuación: this.currentRecommendedMovie.vote_average,
-            año: this.currentRecommendedMovie.release_date
+            id: selectedMovie.id,
+            título: selectedMovie.title,
+            puntuación: selectedMovie.vote_average,
+            año: selectedMovie.release_date
         });
 
         // Agregar al historial
-        this.history.push(this.currentRecommendedMovie.id);
+        const currentHistory = this.state.get('recommendations.history') || [];
+        const newHistory = [...currentHistory, selectedMovie.id];
 
         // Mantener solo las últimas MAX_HISTORY películas
-        if (this.history.length > this.MAX_HISTORY) {
-            const removed = this.history.shift();
+        if (newHistory.length > this.MAX_HISTORY) {
+            const removed = newHistory.shift();
             this.logger.debug(`Película ID ${removed} removida del historial (límite alcanzado)`);
         }
 
-        // Guardar historial persistente
-        this._saveHistory();
-        this.logger.info(`📝 Historial actualizado y guardado: ${this.history.length}/${this.MAX_HISTORY}`);
+        this.state.set('recommendations.history', newHistory);
+        // StateStorageSync guardará el cambio
 
-        this.recommendationComponent.render(this.currentRecommendedMovie);
+        this.logger.info(`📝 Historial actualizado: ${newHistory.length}/${this.MAX_HISTORY}`);
+
+        this.recommendationComponent.render(selectedMovie);
     }
 
     resetHistory() {
-        const previousCount = this.history.length;
-        this.history = [];
-        this._saveHistory();
+        const history = this.state.get('recommendations.history') || [];
+        const previousCount = history.length;
+
+        this.state.set('recommendations.history', []);
+
         this.logger.info(`🔄 Historial reseteado (${previousCount} películas eliminadas)`);
     }
 }

@@ -1,7 +1,8 @@
 import Logger from '../logger.js';
 
 export class FiltersController {
-    constructor() {
+    constructor(state) {
+        this.state = state;
         this.logger = new Logger('FILTERS_CONTROLLER');
         this.dom = {
             sortBySelect: document.getElementById('sort-by'),
@@ -10,24 +11,21 @@ export class FiltersController {
             applyFiltersBtn: document.getElementById('apply-filters'),
             resetFiltersBtn: document.getElementById('reset-filters')
         };
-        this.logger.info('🔍 FiltersController inicializado');
+        this.logger.info('🔍 FiltersController inicializado con State centralizado');
     }
 
     /**
      * Inicializa los event listeners para los filtros
-     * @param {Function} onApplyFilters - Callback para aplicar filtros (recibe objeto de filtros)
-     * @param {Function} onResetFilters - Callback para resetear filtros
      */
-    init(onApplyFilters, onResetFilters) {
+    init() {
         if (this.dom.applyFiltersBtn) {
             this.dom.applyFiltersBtn.addEventListener('click', () => {
                 this.logger.info('🔍 Aplicando filtros...');
                 const filters = this.getCurrentFilters();
                 this.logger.debug('Filtros capturados:', filters);
 
-                if (typeof onApplyFilters === 'function') {
-                    onApplyFilters(filters);
-                }
+                // Actualizar estado centralizado
+                this.state.set('filters', filters);
             });
         }
 
@@ -36,9 +34,13 @@ export class FiltersController {
                 this.logger.info('🔄 Reseteando filtros...');
                 this.resetForm();
 
-                if (typeof onResetFilters === 'function') {
-                    onResetFilters();
-                }
+                // Resetear estado centralizado
+                const defaultFilters = {
+                    sortBy: 'default',
+                    year: '',
+                    rating: ''
+                };
+                this.state.set('filters', defaultFilters);
             });
         }
     }

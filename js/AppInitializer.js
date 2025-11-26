@@ -1,3 +1,5 @@
+import { State } from './core/State.js';
+import { StateStorageSync } from './core/StateStorageSync.js';
 import { StorageService } from './services/StorageService.js';
 import { MoviesView } from './ui/views/MoviesView.js';
 import { EmptyStateView } from './ui/views/EmptyStateView.js';
@@ -17,6 +19,8 @@ import { RecommendationsController } from './controllers/RecommendationsControll
  */
 export class AppInitializer {
     constructor() {
+        this.state = new State(); // Fuente de verdad única
+        this.storageSync = new StateStorageSync(this.state);
         this.controllers = null;
         this.views = null;
     }
@@ -28,11 +32,11 @@ export class AppInitializer {
         mainLogger.info('🎮 Inicializando controladores...');
 
         this.controllers = {
-            movies: new MoviesController(),
-            search: new SearchController(),
-            filters: new FiltersController(),
-            favorites: new FavoritesController(),
-            recommendations: new RecommendationsController()
+            movies: new MoviesController(this.state),
+            search: new SearchController(this.state),
+            filters: new FiltersController(this.state),
+            favorites: new FavoritesController(this.state),
+            recommendations: new RecommendationsController(this.state)
         };
 
         return this.controllers;
@@ -59,38 +63,10 @@ export class AppInitializer {
     setupFilters(controllers, views) {
         mainLogger.info('🔧 Configurando filtros...');
 
-        const { movies: moviesController } = controllers;
-        const { movies: moviesView } = views;
-
-        controllers.filters.init(
-            (filters) => { // onApply
-                moviesController.state.currentFilters = filters;
-                mainLogger.debug('Filtros aplicados:', filters);
-
-                if (moviesController.state.allMoviesCache.length > 0) {
-                    const filteredMovies = moviesController.applyFiltersToMovies(moviesController.state.allMoviesCache);
-                    clearResults();
-                    moviesView.render(filteredMovies);
-                    moviesController.updateResultsCount(filteredMovies.length, moviesController.state.allMoviesCache.length);
-                    mainLogger.success(`✓ Filtros aplicados: ${filteredMovies.length} resultados`);
-                }
-            },
-            () => { // onReset
-                moviesController.state.currentFilters = {
-                    sortBy: 'default',
-                    year: '',
-                    rating: ''
-                };
-
-                if (moviesController.state.allMoviesCache.length > 0) {
-                    clearResults();
-                    moviesView.render(moviesController.state.allMoviesCache);
-                    moviesController.updateResultsCount(moviesController.state.allMoviesCache.length, moviesController.state.allMoviesCache.length);
-                }
-                mainLogger.success('✓ Filtros reseteados');
-            }
-        );
-
+        // Inicializar controladores que requieren setup adicional
+        // FiltersController ahora actualiza el State directamente
+        // MoviesController se suscribe a cambios en el State
+        controllers.filters.init();
         controllers.favorites.init();
         controllers.recommendations.init();
     }
@@ -102,6 +78,9 @@ export class AppInitializer {
         try {
             mainLogger.info('🎬 Inicializando MovieFinder...');
             mainLogger.time('Inicialización completa');
+
+            // Inicializar sincronización
+            this.storageSync.init();
 
             await controllers.movies.init();
 

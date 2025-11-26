@@ -5,14 +5,15 @@ import { clearResults, sectionTitle, resultsGrid } from '../utils.js';
 import Logger from '../logger.js';
 
 export class SearchController {
-    constructor() {
+    constructor(state) {
+        this.state = state;
         this.logger = new Logger('SEARCH_CONTROLLER');
 
         // Inicializar vistas
         this.moviesView = new MoviesView(resultsGrid);
         this.emptyStateView = new EmptyStateView(resultsGrid);
 
-        this.logger.info('🔍 SearchController inicializado');
+        this.logger.info('🔍 SearchController inicializado con State centralizado');
     }
 
     /**
@@ -24,6 +25,9 @@ export class SearchController {
     async intelligentSearch(query, page = 1) {
         this.logger.info(`🧠 Búsqueda inteligente iniciada: "${query}"`);
         this.logger.time('Búsqueda inteligente');
+
+        // Actualizar estado global
+        this.state.set('movies.searchQuery', query);
 
         try {
             // Realizar búsqueda multi-tipo

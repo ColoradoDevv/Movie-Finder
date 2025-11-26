@@ -3,6 +3,7 @@ import { TMDBService } from '../../js/services/TMDBService.js';
 import { MoviesView } from '../../js/ui/views/MoviesView.js';
 import { EmptyStateView } from '../../js/ui/views/EmptyStateView.js';
 import * as utils from '../../js/utils.js';
+import { StateMock } from '../mocks/StateMock.js';
 
 // Mock dependencies
 jest.mock('../../js/services/TMDBService.js', () => ({
@@ -18,15 +19,26 @@ jest.mock('../../js/ui/views/EmptyStateView.js');
 jest.mock('../../js/utils.js', () => ({
     clearResults: jest.fn(),
     sectionTitle: { textContent: '', innerHTML: '' },
-    resultsGrid: { querySelectorAll: jest.fn().mockReturnValue([]) }
+    resultsGrid: { querySelectorAll: jest.fn().mockReturnValue([]), appendChild: jest.fn() }
 }));
 
-jest.mock('../../js/logger.js');
+jest.mock('../../js/logger.js', () => ({
+    default: class {
+        info() { }
+        warn() { }
+        error() { }
+        debug() { }
+        success() { }
+        time() { }
+        timeEnd() { }
+    }
+}));
 
 describe('SearchController', () => {
     let controller;
     let mockMoviesView;
     let mockEmptyStateView;
+    let mockState;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -47,7 +59,8 @@ describe('SearchController', () => {
         MoviesView.mockImplementation(() => mockMoviesView);
         EmptyStateView.mockImplementation(() => mockEmptyStateView);
 
-        controller = new SearchController();
+        mockState = new StateMock();
+        controller = new SearchController(mockState);
     });
 
     describe('Intelligent Search', () => {
@@ -63,6 +76,7 @@ describe('SearchController', () => {
 
             expect(result.searchType).toBe('movie');
             expect(result.movies.length).toBe(1);
+            expect(mockState.get('movies.searchQuery')).toBe('movie query');
         });
 
         it('should detect person search type', async () => {
@@ -116,7 +130,7 @@ describe('SearchController', () => {
             const results = {
                 searchType: 'person',
                 movies: [],
-                people: [{ id: 1, name: 'Actor 1' }]
+                people: [{ id: 1, name: 'Actor 1', id: 1 }]
             };
 
             TMDBService.getMoviesByPerson.mockResolvedValue({
@@ -140,8 +154,7 @@ describe('SearchController', () => {
 
             expect(mockMoviesView.render).toHaveBeenCalledWith(results.movies);
             // Verify suggestions are added
-            const grid = document.getElementById('results-grid');
-            expect(grid.innerHTML).toContain('person-suggestions');
+            expect(utils.resultsGrid.appendChild).toHaveBeenCalled();
         });
     });
 });

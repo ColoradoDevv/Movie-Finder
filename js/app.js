@@ -25,7 +25,8 @@ const eventHandlers = new EventHandlers(
         search: controllers.search,
         favorites: controllers.favorites
     },
-    views
+    views,
+    initializer.storageSync
 );
 
 eventHandlers.init();

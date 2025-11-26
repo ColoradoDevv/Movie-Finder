@@ -1,19 +1,17 @@
 import { FiltersController } from '../../js/controllers/FiltersController.js';
+import { StateMock } from '../mocks/StateMock.js';
 
 // Mock Logger
 jest.mock('../../js/logger.js', () => {
-    return function () {
-        return {
-            info: jest.fn(),
-            debug: jest.fn()
-        };
+    return class {
+        info() { }
+        debug() { }
     };
 });
 
 describe('FiltersController', () => {
     let controller;
-    let onApplyMock;
-    let onResetMock;
+    let mockState;
 
     beforeEach(() => {
         document.body.innerHTML = `
@@ -24,10 +22,9 @@ describe('FiltersController', () => {
             <button id="reset-filters"></button>
         `;
 
-        controller = new FiltersController();
-        onApplyMock = jest.fn();
-        onResetMock = jest.fn();
-        controller.init(onApplyMock, onResetMock);
+        mockState = new StateMock();
+        controller = new FiltersController(mockState);
+        controller.init();
     });
 
     it('should capture current filters', () => {
@@ -44,22 +41,26 @@ describe('FiltersController', () => {
         });
     });
 
-    it('should call onApply callback when apply button clicked', () => {
+    it('should update state when apply button clicked', () => {
         document.getElementById('sort-by').value = 'rating';
         document.getElementById('apply-filters').click();
 
-        expect(onApplyMock).toHaveBeenCalledWith({
+        expect(mockState.get('filters')).toEqual({
             sortBy: 'rating',
             year: '',
             rating: ''
         });
     });
 
-    it('should call onReset callback when reset button clicked', () => {
+    it('should reset state when reset button clicked', () => {
         document.getElementById('sort-by').value = 'rating';
         document.getElementById('reset-filters').click();
 
-        expect(onResetMock).toHaveBeenCalled();
+        expect(mockState.get('filters')).toEqual({
+            sortBy: 'default',
+            year: '',
+            rating: ''
+        });
         expect(document.getElementById('sort-by').value).toBe('default');
     });
 });

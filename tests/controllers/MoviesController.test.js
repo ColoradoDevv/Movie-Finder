@@ -7,6 +7,7 @@ import { MoviesView } from '../../js/ui/views/MoviesView.js';
 import { EmptyStateView } from '../../js/ui/views/EmptyStateView.js';
 import * as utils from '../../js/utils.js';
 import * as mobileNav from '../../js/mobile-nav.js';
+import { StateMock } from '../mocks/StateMock.js';
 
 // Mock dependencies
 jest.mock('../../js/services/TMDBService.js', () => ({
@@ -63,6 +64,7 @@ describe('MoviesController', () => {
     let controller;
     let mockMoviesView;
     let mockEmptyStateView;
+    let mockState;
 
     beforeEach(() => {
         // Clear all mocks
@@ -100,7 +102,8 @@ describe('MoviesController', () => {
         MoviesView.mockImplementation(() => mockMoviesView);
         EmptyStateView.mockImplementation(() => mockEmptyStateView);
 
-        controller = new MoviesController();
+        mockState = new StateMock();
+        controller = new MoviesController(mockState);
     });
 
     describe('Initialization', () => {
@@ -123,6 +126,7 @@ describe('MoviesController', () => {
             await controller.navigateToSection('popular');
             expect(spy).toHaveBeenCalled();
             expect(mobileNav.syncNavigationState).toHaveBeenCalledWith('popular');
+            expect(mockState.get('navigation.currentSection')).toBe('popular');
         });
 
         it('should navigate to top-rated', async () => {
@@ -155,8 +159,8 @@ describe('MoviesController', () => {
             expect(TMDBService.getMovies).toHaveBeenCalledWith('movie/popular', 1);
             expect(utils.hideLoader).toHaveBeenCalled();
             expect(mockMoviesView.render).toHaveBeenCalledWith(mockMovies);
-            expect(controller.state.currentPage).toBe(1);
-            expect(controller.state.totalPages).toBe(5);
+            expect(mockState.get('pagination.currentPage')).toBe(1);
+            expect(mockState.get('pagination.totalPages')).toBe(5);
         });
 
         it('should handle error when loading movies', async () => {
@@ -172,7 +176,7 @@ describe('MoviesController', () => {
 
             await controller.loadMoviesByGenre('28', 'Action');
 
-            expect(controller.state.currentSection).toBe('genre');
+            expect(mockState.get('navigation.currentSection')).toBe('genre');
             expect(utils.sectionTitle.textContent).toBe('Action');
             expect(TMDBService.getMovies).toHaveBeenCalledWith(expect.stringContaining('with_genres=28'), 1);
         });
@@ -181,10 +185,10 @@ describe('MoviesController', () => {
     describe('Pagination', () => {
         it('should load more movies', async () => {
             // Setup initial state
-            controller.state.currentPage = 1;
-            controller.state.totalPages = 5;
-            controller.state.currentEndpoint = 'movie/popular';
-            controller.state.allMoviesCache = [{ id: 1 }];
+            mockState.set('pagination.currentPage', 1);
+            mockState.set('pagination.totalPages', 5);
+            mockState.set('navigation.currentEndpoint', 'movie/popular');
+            mockState.set('movies.cache', [{ id: 1 }]);
 
             const newMovies = [{ id: 2 }];
             TMDBService.getMovies.mockResolvedValue({ results: newMovies, page: 2, total_pages: 5 });
@@ -193,14 +197,14 @@ describe('MoviesController', () => {
             await controller.loadMore();
 
             expect(TMDBService.getMovies).toHaveBeenCalledWith('movie/popular', 2);
-            expect(controller.state.allMoviesCache.length).toBe(2);
+            expect(mockState.get('movies.cache').length).toBe(2);
             expect(mockMoviesView.append).toHaveBeenCalled();
-            expect(controller.state.currentPage).toBe(2);
+            expect(mockState.get('pagination.currentPage')).toBe(2);
         });
 
         it('should not load more if on last page', async () => {
-            controller.state.currentPage = 5;
-            controller.state.totalPages = 5;
+            mockState.set('pagination.currentPage', 5);
+            mockState.set('pagination.totalPages', 5);
 
             await controller.loadMore();
 
@@ -238,8 +242,8 @@ describe('MoviesController', () => {
 
     describe('Pagination Edge Cases', () => {
         it('should not call TMDBService when already on last page', async () => {
-            controller.state.currentPage = 3;
-            controller.state.totalPages = 3;
+            mockState.set('pagination.currentPage', 3);
+            mockState.set('pagination.totalPages', 3);
             await controller.loadMore();
             expect(TMDBService.getMovies).not.toHaveBeenCalled();
         });
@@ -270,11 +274,11 @@ describe('MoviesController', () => {
 
     describe('Update Grid DOM Updates', () => {
         it('should return early if currentSection is favorites or history', () => {
-            controller.state.currentSection = 'favorites';
+            mockState.set('navigation.currentSection', 'favorites');
             controller.updateGrid();
             expect(utils.resultsGrid.querySelectorAll).not.toHaveBeenCalled();
 
-            controller.state.currentSection = 'history';
+            mockState.set('navigation.currentSection', 'history');
             controller.updateGrid();
             expect(utils.resultsGrid.querySelectorAll).not.toHaveBeenCalled();
         });
@@ -282,9 +286,10 @@ describe('MoviesController', () => {
 
     describe('Load More Filtering', () => {
         it('should filter out non-movie media types', async () => {
-            controller.state.currentPage = 1;
-            controller.state.totalPages = 5;
-            controller.state.allMoviesCache = [];
+            mockState.set('pagination.currentPage', 1);
+            mockState.set('pagination.totalPages', 5);
+            mockState.set('movies.cache', []);
+            mockState.set('navigation.currentEndpoint', 'movie/popular');
 
             const mixedResults = [
                 { id: 1, title: 'Movie 1', media_type: 'movie' },
@@ -297,8 +302,8 @@ describe('MoviesController', () => {
 
             await controller.loadMore();
 
-            expect(controller.state.allMoviesCache.length).toBe(2);
-            expect(controller.state.allMoviesCache.find(m => m.id === 2)).toBeUndefined();
+            expect(mockState.get('movies.cache').length).toBe(2);
+            expect(mockState.get('movies.cache').find(m => m.id === 2)).toBeUndefined();
         });
     });
 

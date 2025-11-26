@@ -43,6 +43,7 @@ js/
 ├── EventHandlers.js          # Gestión de eventos
 ├── core/                     # Núcleo
 │   ├── State.js             # Gestión de estado
+│   ├── StateStorageSync.js  # Sincronización con Storage
 │   ├── Router.js            # Routing
 │   └── EventBus.js          # Pub/Sub
 ├── controllers/              # Lógica de negocio
@@ -71,13 +72,19 @@ js/
 
 ## Flujo de Datos
 ```
-User Action → EventHandlers → Controller → Service → API/Storage
+User Action → EventHandlers → Controller
                                    ↓
                             State Update
                                    ↓
                           State Notification
                                    ↓
-                            UI Re-render
+                  ┌────────────────┴────────────────┐
+                  ↓                                 ↓
+             UI Re-render                   StateStorageSync
+                                                    ↓
+                                              StorageService
+                                                    ↓
+                                               localStorage
 ```
 
 ## Principios de Diseño

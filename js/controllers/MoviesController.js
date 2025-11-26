@@ -12,22 +12,10 @@ import { StorageService } from '../services/StorageService.js';
  * Gestiona la lógica de negocio relacionada con películas, navegación y listados.
  */
 export class MoviesController {
-    constructor() {
-        // Estado de la aplicación
-        this.state = {
-            currentPage: 1,
-            totalPages: 1,
-            currentSection: 'popular',
-            currentEndpoint: 'movie/popular',
-            activeGenre: null,
-            currentSearchQuery: '',
-            allMoviesCache: [],
-            currentFilters: {
-                sortBy: 'default',
-                year: '',
-                rating: ''
-            }
-        };
+    constructor(state) {
+        // Inyectar State centralizado
+        this.state = state;
+        this.activeGenreBtn = null; // Referencia local al botón activo
 
         // Referencias al DOM (se inicializan en init)
         this.dom = {
@@ -42,7 +30,7 @@ export class MoviesController {
         this.moviesView = new MoviesView(resultsGrid);
         this.emptyStateView = new EmptyStateView(resultsGrid);
 
-        mainLogger.info('🎬 MoviesController inicializado');
+        mainLogger.info('🎬 MoviesController inicializado con State centralizado');
     }
 
     /**
@@ -51,6 +39,19 @@ export class MoviesController {
     async init() {
         await this.initGenres();
         await this.loadPopularMovies();
+
+        // Suscribirse a cambios en filtros
+        this.state.subscribe('filters', (filters) => {
+            mainLogger.info('🔄 Filtros actualizados, recargando vista...');
+            const cache = this.state.get('movies.cache');
+            if (cache && cache.length > 0) {
+                const filteredMovies = this.applyFiltersToMovies(cache);
+                clearResults();
+                this.moviesView.render(filteredMovies);
+                this.updateResultsCount(filteredMovies.length, cache.length);
+                mainLogger.success(`✓ Filtros aplicados: ${filteredMovies.length} resultados`);
+            }
+        });
     }
 
     /**
@@ -60,7 +61,7 @@ export class MoviesController {
     async navigateToSection(section) {
         mainLogger.info(`🧭 Navegando a: ${section}`);
 
-        this.state.currentSection = section;
+        this.state.set('navigation.currentSection', section);
         syncNavigationState(section);
 
         switch (section) {
@@ -123,25 +124,27 @@ export class MoviesController {
     async loadChristmasMovies() {
         mainLogger.info('🎄 Cargando películas navideñas...');
 
-        this.state.currentSection = 'christmas';
-        this.state.currentEndpoint = 'search/movie?query=christmas';
+        this.state.set('navigation.currentSection', 'christmas');
+        const endpoint = 'search/movie?query=christmas';
+        this.state.set('navigation.currentEndpoint', endpoint);
+
         sectionTitle.textContent = '🎄 Películas Navideñas';
         sectionTitle.classList.add('christmas-title');
         this.resetSearchAndFilters();
 
-        if (this.state.activeGenre) {
-            this.state.activeGenre.classList.remove('active');
+        if (this.activeGenreBtn) {
+            this.activeGenreBtn.classList.remove('active');
         }
 
         const christmasGenreBtn = document.querySelector('.genre-btn.christmas-genre');
         if (christmasGenreBtn) {
-            this.state.activeGenre = christmasGenreBtn;
+            this.activeGenreBtn = christmasGenreBtn;
             christmasGenreBtn.classList.add('active');
         }
 
         showLoader();
         try {
-            const data = await TMDBService.getMovies(this.state.currentEndpoint, 1);
+            const data = await TMDBService.getMovies(endpoint, 1);
             hideLoader();
 
             if (data && data.results && data.results.length > 0) {
@@ -160,17 +163,17 @@ export class MoviesController {
                 clearResults();
 
                 if (christmasMovies.length > 0) {
-                    this.state.allMoviesCache = [...christmasMovies];
+                    this.state.set('movies.cache', [...christmasMovies]);
                     this.moviesView.render(christmasMovies);
-                    this.state.currentPage = 1;
-                    this.state.totalPages = data.total_pages;
+                    this.state.set('pagination.currentPage', 1);
+                    this.state.set('pagination.totalPages', data.total_pages);
                     this._updateLoadMoreButton();
                     mainLogger.success(`✓ ${christmasMovies.length} películas navideñas cargadas`);
                 } else {
-                    this.state.allMoviesCache = [...data.results];
+                    this.state.set('movies.cache', [...data.results]);
                     this.moviesView.render(data.results);
-                    this.state.currentPage = 1;
-                    this.state.totalPages = data.total_pages;
+                    this.state.set('pagination.currentPage', 1);
+                    this.state.set('pagination.totalPages', data.total_pages);
                     this._updateLoadMoreButton();
                     mainLogger.success(`✓ ${data.results.length} películas relacionadas cargadas`);
                 }
@@ -192,23 +195,25 @@ export class MoviesController {
     async loadMoviesByGenre(genreId, genreName) {
         mainLogger.info(`🎭 Filtro de género aplicado: ${genreName}`);
 
-        this.state.currentSection = 'genre';
-        this.state.currentEndpoint = `discover/movie?with_genres=${genreId}`;
+        this.state.set('navigation.currentSection', 'genre');
+        const endpoint = `discover/movie?with_genres=${genreId}`;
+        this.state.set('navigation.currentEndpoint', endpoint);
+
         sectionTitle.textContent = genreName;
         sectionTitle.classList.remove('christmas-title');
         this.resetSearchAndFilters();
 
         showLoader();
         try {
-            const data = await TMDBService.getMovies(this.state.currentEndpoint, 1);
+            const data = await TMDBService.getMovies(endpoint, 1);
             hideLoader();
 
             if (data) {
                 clearResults();
-                this.state.allMoviesCache = [...data.results];
+                this.state.set('movies.cache', [...data.results]);
                 this.moviesView.render(data.results);
-                this.state.currentPage = 1;
-                this.state.totalPages = data.total_pages;
+                this.state.set('pagination.currentPage', 1);
+                this.state.set('pagination.totalPages', data.total_pages);
                 this._updateLoadMoreButton();
                 mainLogger.success(`✓ ${data.results.length} películas de ${genreName}`);
             }
@@ -223,13 +228,17 @@ export class MoviesController {
      * Carga más resultados (paginación)
      */
     async loadMore() {
-        if (this.state.currentPage >= this.state.totalPages) return;
+        const currentPage = this.state.get('pagination.currentPage');
+        const totalPages = this.state.get('pagination.totalPages');
+
+        if (currentPage >= totalPages) return;
 
         try {
-            mainLogger.info(`📄 Cargando página ${this.state.currentPage + 1}/${this.state.totalPages}...`);
+            mainLogger.info(`📄 Cargando página ${currentPage + 1}/${totalPages}...`);
 
             showLoader();
-            const data = await TMDBService.getMovies(this.state.currentEndpoint, this.state.currentPage + 1);
+            const endpoint = this.state.get('navigation.currentEndpoint');
+            const data = await TMDBService.getMovies(endpoint, currentPage + 1);
             hideLoader();
 
             if (data && data.results) {
@@ -237,7 +246,9 @@ export class MoviesController {
                 const newMovies = data.results.filter(item => item.media_type === 'movie' || !item.media_type);
 
                 // Agregar a cache
-                this.state.allMoviesCache = [...this.state.allMoviesCache, ...newMovies];
+                const currentCache = this.state.get('movies.cache');
+                const updatedCache = [...currentCache, ...newMovies];
+                this.state.set('movies.cache', updatedCache);
 
                 // Aplicar filtros a las nuevas películas
                 const filteredNewMovies = this.applyFiltersToMovies(newMovies);
@@ -246,16 +257,17 @@ export class MoviesController {
                 this.moviesView.append(filteredNewMovies);
 
                 // Actualizar contador con todas las películas filtradas
-                const allFilteredMovies = this.applyFiltersToMovies(this.state.allMoviesCache);
-                this.updateResultsCount(allFilteredMovies.length, this.state.allMoviesCache.length);
+                const allFilteredMovies = this.applyFiltersToMovies(updatedCache);
+                this.updateResultsCount(allFilteredMovies.length, updatedCache.length);
 
-                this.state.currentPage = data.page;
-                if (this.state.currentPage >= data.total_pages) {
+                this.state.set('pagination.currentPage', data.page);
+
+                if (data.page >= data.total_pages) {
                     if (this.dom.loadMoreButton) this.dom.loadMoreButton.style.display = 'none';
                     mainLogger.info('✓ Todas las páginas cargadas');
                 }
 
-                mainLogger.success(`✓ Página ${this.state.currentPage} cargada y filtrada`);
+                mainLogger.success(`✓ Página ${data.page} cargada y filtrada`);
             }
         } catch (error) {
             hideLoader();
@@ -330,7 +342,8 @@ export class MoviesController {
 
         // Si estamos en una sección manejada por otro controlador, no hacemos nada aquí
         // (FavoritesController manejará su propia actualización si es necesario)
-        if (this.state.currentSection === 'favorites' || this.state.currentSection === 'history') {
+        const currentSection = this.state.get('navigation.currentSection');
+        if (currentSection === 'favorites' || currentSection === 'history') {
             return;
         }
 
@@ -374,33 +387,35 @@ export class MoviesController {
         try {
             mainLogger.info(logMessage);
 
-            this.state.currentSection = section;
-            this.state.currentEndpoint = endpoint;
+            this.state.set('navigation.currentSection', section);
+            this.state.set('navigation.currentEndpoint', endpoint);
+
             sectionTitle.textContent = title;
             sectionTitle.classList.remove('christmas-title');
             this.resetSearchAndFilters();
 
-            if (this.state.activeGenre) {
-                this.state.activeGenre.classList.remove('active');
-                this.state.activeGenre = null;
+            if (this.activeGenreBtn) {
+                this.activeGenreBtn.classList.remove('active');
+                this.activeGenreBtn = null;
             }
 
             showLoader();
-            const data = await TMDBService.getMovies(this.state.currentEndpoint, 1);
+            const data = await TMDBService.getMovies(endpoint, 1);
             hideLoader();
 
             if (data && data.results) {
                 clearResults();
-                this.state.allMoviesCache = [...data.results];
-                const filteredMovies = this.applyFiltersToMovies(this.state.allMoviesCache);
-                this.moviesView.render(filteredMovies);
-                this.updateResultsCount(filteredMovies.length, this.state.allMoviesCache.length);
+                this.state.set('movies.cache', [...data.results]);
 
-                this.state.currentPage = 1;
-                this.state.totalPages = data.total_pages;
+                const filteredMovies = this.applyFiltersToMovies(data.results);
+                this.moviesView.render(filteredMovies);
+                this.updateResultsCount(filteredMovies.length, data.results.length);
+
+                this.state.set('pagination.currentPage', 1);
+                this.state.set('pagination.totalPages', data.total_pages);
                 this._updateLoadMoreButton();
 
-                mainLogger.success(`✓ ${title} cargadas (Página 1/${this.state.totalPages})`);
+                mainLogger.success(`✓ ${title} cargadas (Página 1/${data.total_pages})`);
             } else {
                 this.emptyStateView.show(`No se pudieron cargar ${title.toLowerCase()}`);
                 this.updateResultsCount(0, 0);
@@ -414,12 +429,12 @@ export class MoviesController {
 
     resetSearchAndFilters() {
         if (this.dom.searchInput) this.dom.searchInput.value = '';
-        this.state.currentSearchQuery = '';
+        this.state.set('movies.searchQuery', '');
         // Reset filters logic should be here or handled by FiltersController later
     }
 
     applyFiltersToMovies(movies) {
-        return FiltersService.applyFilters(movies, this.state.currentFilters);
+        return FiltersService.applyFilters(movies, this.state.get('filters'));
     }
 
     updateResultsCount(count, total) {
@@ -434,7 +449,8 @@ export class MoviesController {
 
     _updateLoadMoreButton() {
         if (this.dom.loadMoreButton) {
-            this.dom.loadMoreButton.style.display = this.state.totalPages > 1 ? 'block' : 'none';
+            const totalPages = this.state.get('pagination.totalPages');
+            this.dom.loadMoreButton.style.display = totalPages > 1 ? 'block' : 'none';
         }
     }
 

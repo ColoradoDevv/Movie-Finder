@@ -7,7 +7,7 @@ import { mainLogger } from './logger.js';
  * Módulo centralizado para manejar todos los event listeners de la aplicación
  */
 export class EventHandlers {
-    constructor(controllers, views) {
+    constructor(controllers, views, storageSync) {
         this.moviesController = controllers.movies;
         this.searchController = controllers.search;
         this.favoritesController = controllers.favorites;
@@ -15,6 +15,8 @@ export class EventHandlers {
         this.modalView = views.modal;
         this.moviesView = views.movies;
         this.emptyStateView = views.empty;
+
+        this.storageSync = storageSync;
 
         this.dom = {
             searchInput: document.getElementById('searchInput'),
@@ -111,12 +113,12 @@ export class EventHandlers {
 
                 if (results) {
                     // Actualizar estado del controlador para permitir paginación
-                    this.moviesController.state.currentSection = 'search';
-                    this.moviesController.state.currentSearchQuery = query;
-                    this.moviesController.state.currentEndpoint = `search/multi?query=${encodeURIComponent(query)}`;
-                    this.moviesController.state.currentPage = 1;
-                    this.moviesController.state.totalPages = results.total_pages;
-                    this.moviesController.state.allMoviesCache = results.movies || [];
+                    this.moviesController.state.set('navigation.currentSection', 'search');
+                    this.moviesController.state.set('movies.searchQuery', query);
+                    this.moviesController.state.set('navigation.currentEndpoint', `search/multi?query=${encodeURIComponent(query)}`);
+                    this.moviesController.state.set('pagination.currentPage', 1);
+                    this.moviesController.state.set('pagination.totalPages', results.total_pages);
+                    this.moviesController.state.set('movies.cache', results.movies || []);
 
                     // Procesar y mostrar resultados
                     await this.searchController.processSearchResults(results, query);
@@ -145,7 +147,8 @@ export class EventHandlers {
 
         // Buscar al perder foco (opcional)
         this.dom.searchInput.addEventListener('blur', () => {
-            if (this.dom.searchInput.value.trim() && this.dom.searchInput.value.trim() !== this.moviesController.state.currentSearchQuery) {
+            const currentQuery = this.moviesController.state.get('movies.searchQuery');
+            if (this.dom.searchInput.value.trim() && this.dom.searchInput.value.trim() !== currentQuery) {
                 performSearch();
             }
         });
@@ -169,10 +172,10 @@ export class EventHandlers {
             const genreName = btn.textContent;
             const genreId = btn.dataset.genreId;
 
-            if (this.moviesController.state.activeGenre) {
-                this.moviesController.state.activeGenre.classList.remove('active');
+            if (this.moviesController.activeGenreBtn) {
+                this.moviesController.activeGenreBtn.classList.remove('active');
             }
-            this.moviesController.state.activeGenre = btn;
+            this.moviesController.activeGenreBtn = btn;
             btn.classList.add('active');
 
             this.moviesController.loadMoviesByGenre(genreId, genreName);
@@ -231,13 +234,19 @@ export class EventHandlers {
 
         modal.addEventListener('movie-state-changed', () => {
             mainLogger.debug('🔔 Evento movie-state-changed recibido');
+
+            // Sincronizar State con Storage (esto disparará los suscriptores)
+            if (this.storageSync) {
+                this.storageSync.syncFromStorage();
+            }
+
             this.moviesController.updateGrid();
-            this.favoritesController.updateBadges();
 
             // Si estamos en favoritos o historial, recargar la vista
-            if (this.moviesController.state.currentSection === 'favorites') {
+            const currentSection = this.moviesController.state.get('navigation.currentSection');
+            if (currentSection === 'favorites') {
                 this.favoritesController.displayFavorites();
-            } else if (this.moviesController.state.currentSection === 'history') {
+            } else if (currentSection === 'history') {
                 this.favoritesController.displayHistory();
             }
         });

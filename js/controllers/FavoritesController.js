@@ -6,7 +6,8 @@ import Logger from '../logger.js';
 import { syncNavigationState, updateNavigationBadges } from '../mobile-nav.js';
 
 export class FavoritesController {
-    constructor() {
+    constructor(state) {
+        this.state = state;
         this.logger = new Logger('FAVORITES_CONTROLLER');
         this.dom = {
             loadMoreButton: document.getElementById('load-more'),
@@ -20,12 +21,16 @@ export class FavoritesController {
         this.moviesView = new MoviesView(resultsGrid);
         this.emptyStateView = new EmptyStateView(resultsGrid);
 
-        this.logger.info('❤️ FavoritesController inicializado');
+        this.logger.info('❤️ FavoritesController inicializado con State centralizado');
     }
 
     init() {
-        this.updateBadges();
+        // La sincronización inicial ya la realiza StateStorageSync
         this._setupEventListeners();
+        this._setupSubscribers();
+
+        // Actualizar badges iniciales
+        this.updateBadges();
     }
 
     _setupEventListeners() {
@@ -46,11 +51,33 @@ export class FavoritesController {
         }
     }
 
+    _setupSubscribers() {
+        // Actualizar badges cuando cambien favoritos o vistos
+        this.state.subscribe('user.favorites', (favorites) => {
+            this.updateBadges();
+            // Si estamos viendo favoritos, recargar la vista
+            if (this.state.get('navigation.currentSection') === 'favorites') {
+                this.displayFavorites();
+            }
+        });
+
+        this.state.subscribe('user.watched', (watched) => {
+            this.updateBadges();
+            // Si estamos viendo historial, recargar la vista
+            if (this.state.get('navigation.currentSection') === 'history') {
+                this.displayHistory();
+            }
+        });
+    }
+
     /**
      * Muestra la lista de favoritos
      */
     displayFavorites() {
         this.logger.info('❤️ Mostrando favoritos...');
+
+        // Actualizar estado de navegación
+        this.state.set('navigation.currentSection', 'favorites');
 
         // Actualizar título y estado visual
         sectionTitle.textContent = 'Mis favoritos';
@@ -62,7 +89,7 @@ export class FavoritesController {
         // Limpiar resultados anteriores
         clearResults();
 
-        const favorites = StorageService.getFavorites();
+        const favorites = this.state.get('user.favorites');
 
         if (favorites.length === 0) {
             this.emptyStateView.show('Aún no tienes películas en favoritos');
@@ -80,6 +107,9 @@ export class FavoritesController {
     displayHistory() {
         this.logger.info('📺 Mostrando historial...');
 
+        // Actualizar estado de navegación
+        this.state.set('navigation.currentSection', 'history');
+
         // Actualizar título y estado visual
         sectionTitle.textContent = 'Películas vistas';
         sectionTitle.classList.remove('christmas-title');
@@ -90,7 +120,7 @@ export class FavoritesController {
         // Limpiar resultados anteriores
         clearResults();
 
-        const watched = StorageService.getWatchedMovies();
+        const watched = this.state.get('user.watched');
 
         if (watched.length === 0) {
             this.emptyStateView.show('Aún no has marcado ninguna película como vista');
@@ -106,6 +136,8 @@ export class FavoritesController {
      * Actualiza los badges de contadores en la navegación
      */
     updateBadges() {
-        updateNavigationBadges(StorageService.getFavorites().length, StorageService.getWatchedMovies().length);
+        const favorites = this.state.get('user.favorites') || [];
+        const watched = this.state.get('user.watched') || [];
+        updateNavigationBadges(favorites.length, watched.length);
     }
 }
