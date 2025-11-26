@@ -17,6 +17,7 @@ build/
 
 # API Keys (NUNCA commitear)
 **/config.js.local
+js/config.js
 secrets/
 
 # IDEs

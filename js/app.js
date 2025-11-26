@@ -1,26 +1,50 @@
-/**
- * app.js
- * Punto de entrada principal de la aplicación
- * Inicializa todos los módulos y conecta la arquitectura
- */
-
 import { mainLogger } from './logger.js';
+import { initializeMobileNavigation } from './mobile-nav.js';
+import { AppInitializer } from './AppInitializer.js';
+import { EventHandlers } from './EventHandlers.js';
 
-mainLogger.info('🚀 MovieFinder v2.0 - Arquitectura Modular');
+mainLogger.info('🚀 MovieFinder iniciando...');
 
-// TODO: Implementar en Refactor #6 (después de tener todos los módulos)
-async function initApp() {
-    mainLogger.info('⚠️ Modo de transición: usando main.js legacy');
-    
-    // Por ahora, importar y ejecutar main.js antiguo
-    const { default: legacyInit } = await import('./main.js');
-    
-    mainLogger.warn('Refactorización en progreso...');
+// ============================================
+// INICIALIZACIÓN
+// ============================================
+
+const initializer = new AppInitializer();
+
+// Inicializar controladores y vistas
+const controllers = initializer.initializeControllers();
+const views = initializer.initializeViews();
+
+// Configurar filtros
+initializer.setupFilters(controllers, views);
+
+// Configurar event handlers
+const eventHandlers = new EventHandlers(
+    {
+        movies: controllers.movies,
+        search: controllers.search,
+        favorites: controllers.favorites
+    },
+    views
+);
+
+eventHandlers.init();
+
+// ============================================
+// INICIO DE LA APLICACIÓN
+// ============================================
+
+async function startApp() {
+    await initializer.initializeApp(controllers, views);
 }
 
-// Ejecutar
+// Iniciar cuando el DOM esté listo
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', () => {
+        startApp();
+        initializeMobileNavigation();
+    });
 } else {
-    initApp();
+    startApp();
+    initializeMobileNavigation();
 }
